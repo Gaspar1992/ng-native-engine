@@ -1,21 +1,39 @@
 <ng-window id="win" title="{{ windowTitle() }}">
   <ng-header-bar id="hdr" subtitle="{{ subtitle() }}">{{ windowTitle() }}</ng-header-bar>
-  <ng-scroll id="scroll" min-height="360px">
+  <ng-scroll id="scroll" min-height="420px">
     <ng-box id="vbox" class="main-card" orientation="vertical" spacing="12px">
-      <ng-label id="hello" class="hero-title">{{ greeting() }}</ng-label>
-      <ng-label id="lbl">Count: {{ count() }}</ng-label>
+      <ng-entry
+        id="profile_entry"
+        placeholder="Buscar Pokémon (ej. pikachu, charizard, 25)..."
+        value="{{ author() }}"
+      />
       <ng-box id="actions" orientation="horizontal" spacing="8px">
-        <ng-button id="btn" class="suggested-action" (click)="increment()">Next (#+1)</ng-button>
-        <ng-button id="btn_dec" (click)="decrement()">Prev (#-1)</ng-button>
-        <ng-button id="btn_reset" (click)="reset()">Reset (#1)</ng-button>
+        <ng-button id="btn_dec" (click)="decrement()">‹ Anterior</ng-button>
+        <ng-button id="btn" class="suggested-action" (click)="increment()">Siguiente ›</ng-button>
+        <ng-button id="btn_reset" (click)="reset()">Inicio (#1)</ng-button>
+      </ng-box>
+      <ng-box id="poke_card" class="pokemon-card" orientation="vertical" spacing="8px">
+        <ng-image id="poke_sprite" src="/tmp/ng_native_pokedex/1.png" width="180" height="180" />
+        <ng-label id="poke_num" class="poke-num">N.º 0001</ng-label>
+        <ng-label id="hello" class="hero-title">{{ greeting() }}</ng-label>
+        <ng-box id="types_box" orientation="horizontal" spacing="8px">
+          <ng-label id="poke_type_primary" class="badge-grass">PLANTA</ng-label>
+          <ng-label id="poke_type_secondary" class="badge-poison">VENENO</ng-label>
+        </ng-box>
+        <ng-grid id="specs_grid" class="specs-panel" row-spacing="4px" column-spacing="24px">
+          <ng-label id="lbl_h_title" class="spec-label">Altura</ng-label>
+          <ng-label id="lbl_w_title" class="spec-label">Peso</ng-label>
+          <ng-label id="lbl_height" class="spec-val">0.7 m</ng-label>
+          <ng-label id="lbl_weight" class="spec-val">6.9 kg</ng-label>
+        </ng-grid>
+        <ng-label id="lbl" class="stats-label">Count: {{ count() }}</ng-label>
+        <ng-level-bar id="hp_bar" value="45" max="255" />
+        <ng-level-bar id="atk_bar" value="49" max="255" />
+        <ng-level-bar id="def_bar" value="49" max="255" />
+        <ng-level-bar id="spd_bar" value="45" max="255" />
       </ng-box>
       <ng-separator id="sep" orientation="horizontal" />
       <ng-grid id="controls_grid" row-spacing="8px" column-spacing="12px">
-        <ng-entry
-          id="profile_entry"
-          placeholder="Search Pokémon (e.g. pikachu, charizard)..."
-          value="{{ author() }}"
-        />
         <ng-switch id="dark_switch" active="true" />
         <ng-checkbox id="telemetry_chk" active="true">Enable native JIT</ng-checkbox>
         <ng-slider id="fps_slider" min="30" max="144" value="60" />

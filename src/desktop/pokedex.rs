@@ -1,4 +1,7 @@
 use super::{DesktopServices, NativeHttpRequest};
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 
 /// Strongly-typed Pokémon metadata retrieved from `pokeapi.co`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -6,6 +9,7 @@ pub struct PokemonInfo {
     pub id: u32,
     pub name: String,
     pub primary_type: String,
+    pub secondary_type: Option<String>,
     pub hp: u32,
     pub attack: u32,
     pub defense: u32,
@@ -13,9 +17,15 @@ pub struct PokemonInfo {
     pub height_dm: u32,
     pub weight_hg: u32,
     pub base_exp: u32,
+    pub sprite_path: String,
 }
 
 impl PokemonInfo {
+    /// Formats Pokémon Pokedex number as featured on `pokemon.com` (e.g. "N.º 0025").
+    pub fn format_id(&self) -> String {
+        format!("N.º {:04}", self.id)
+    }
+
     /// Formats height in meters (e.g. 4 dm -> 0.4 m).
     pub fn format_height(&self) -> String {
         format!("{:.1} m", f64::from(self.height_dm) / 10.0)
@@ -44,6 +54,7 @@ impl PokemonInfo {
 
         let primary_type =
             Self::extract_primary_type(json).unwrap_or_else(|| String::from("normal"));
+        let secondary_type = Self::extract_secondary_type(json);
         let hp = Self::extract_stat(json, "hp").unwrap_or(35);
         let attack = Self::extract_stat(json, "attack").unwrap_or(55);
         let defense = Self::extract_stat(json, "defense").unwrap_or(40);
@@ -53,6 +64,7 @@ impl PokemonInfo {
             id,
             name,
             primary_type,
+            secondary_type,
             hp,
             attack,
             defense,
@@ -60,6 +72,7 @@ impl PokemonInfo {
             height_dm,
             weight_hg,
             base_exp,
+            sprite_path: format!("/tmp/ng_native_pokedex/{id}.png"),
         })
     }
 
@@ -89,6 +102,17 @@ impl PokemonInfo {
         Self::extract_string(type_obj, "\"name\":")
     }
 
+    fn extract_secondary_type(json: &str) -> Option<String> {
+        let types_idx = json.find("\"types\":")?;
+        let rest = &json[types_idx..];
+        let type_key = "\"type\":";
+        let first_idx = rest.find(type_key)?;
+        let second_rest = &rest[first_idx + type_key.len()..];
+        let second_idx = second_rest.find(type_key)?;
+        let type_obj = &second_rest[second_idx..];
+        Self::extract_string(type_obj, "\"name\":")
+    }
+
     fn extract_stat(json: &str, stat_name: &str) -> Option<u32> {
         let stat_needle = format!("\"name\":\"{stat_name}\"");
         let idx = json.find(&stat_needle)?;
@@ -106,6 +130,24 @@ impl PokemonInfo {
     }
 }
 
+fn ensure_official_artwork_cached(id: u32) -> String {
+    let cache_path = format!("/tmp/ng_native_pokedex/{id}.png");
+    if !Path::new(&cache_path).exists() {
+        let _ = fs::create_dir_all("/tmp/ng_native_pokedex");
+        let artwork_url = format!(
+            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{id}.png"
+        );
+        let _ = Command::new("curl")
+            .arg("-s")
+            .arg("-L")
+            .arg(&artwork_url)
+            .arg("-o")
+            .arg(&cache_path)
+            .status();
+    }
+    cache_path
+}
+
 impl DesktopServices {
     /// Retrieves Pokémon data from `PokéAPI` (`https://pokeapi.co/api/v2/pokemon/{query}`).
     /// Seamlessly falls back to embedded offline definitions if network is offline or unmocked.
@@ -121,29 +163,19 @@ impl DesktopServices {
             body: None,
         });
         if response.status < 400
-            && let Some(poke) = PokemonInfo::parse_json(&response.body)
+            && let Some(mut poke) = PokemonInfo::parse_json(&response.body)
         {
+            poke.sprite_path = ensure_official_artwork_cached(poke.id);
             return Ok(poke);
         }
 
         // Embedded offline fallback for classic Pokémon
-        match clean.as_str() {
-            "25" | "pikachu" => Ok(PokemonInfo {
-                id: 25,
-                name: String::from("pikachu"),
-                primary_type: String::from("electric"),
-                hp: 35,
-                attack: 55,
-                defense: 40,
-                speed: 90,
-                height_dm: 4,
-                weight_hg: 60,
-                base_exp: 112,
-            }),
-            "1" | "bulbasaur" => Ok(PokemonInfo {
+        let mut fallback = match clean.as_str() {
+            "1" | "bulbasaur" => PokemonInfo {
                 id: 1,
                 name: String::from("bulbasaur"),
                 primary_type: String::from("grass"),
+                secondary_type: Some(String::from("poison")),
                 hp: 45,
                 attack: 49,
                 defense: 49,
@@ -151,11 +183,13 @@ impl DesktopServices {
                 height_dm: 7,
                 weight_hg: 69,
                 base_exp: 64,
-            }),
-            "6" | "charizard" => Ok(PokemonInfo {
+                sprite_path: String::new(),
+            },
+            "6" | "charizard" => PokemonInfo {
                 id: 6,
                 name: String::from("charizard"),
                 primary_type: String::from("fire"),
+                secondary_type: Some(String::from("flying")),
                 hp: 78,
                 attack: 84,
                 defense: 78,
@@ -163,11 +197,27 @@ impl DesktopServices {
                 height_dm: 17,
                 weight_hg: 905,
                 base_exp: 267,
-            }),
-            "94" | "gengar" => Ok(PokemonInfo {
+                sprite_path: String::new(),
+            },
+            "25" | "pikachu" => PokemonInfo {
+                id: 25,
+                name: String::from("pikachu"),
+                primary_type: String::from("electric"),
+                secondary_type: None,
+                hp: 35,
+                attack: 55,
+                defense: 40,
+                speed: 90,
+                height_dm: 4,
+                weight_hg: 60,
+                base_exp: 112,
+                sprite_path: String::new(),
+            },
+            "94" | "gengar" => PokemonInfo {
                 id: 94,
                 name: String::from("gengar"),
                 primary_type: String::from("ghost"),
+                secondary_type: Some(String::from("poison")),
                 hp: 60,
                 attack: 65,
                 defense: 60,
@@ -175,12 +225,18 @@ impl DesktopServices {
                 height_dm: 15,
                 weight_hg: 405,
                 base_exp: 250,
-            }),
-            _ => Err(format!(
-                "Failed to fetch Pokémon '{clean}' ({}: {})",
-                response.status, response.status_text
-            )),
-        }
+                sprite_path: String::new(),
+            },
+            _ => {
+                return Err(format!(
+                    "Failed to fetch Pokémon '{clean}' ({}: {})",
+                    response.status, response.status_text
+                ));
+            }
+        };
+
+        fallback.sprite_path = ensure_official_artwork_cached(fallback.id);
+        Ok(fallback)
     }
 }
 
@@ -211,7 +267,9 @@ mod tests {
         assert_eq!(p.id, 25);
         assert_eq!(p.name, "pikachu");
         assert_eq!(p.display_name(), "Pikachu");
+        assert_eq!(p.format_id(), "N.º 0025");
         assert_eq!(p.primary_type, "electric");
+        assert_eq!(p.secondary_type, None);
         assert_eq!(p.hp, 35);
         assert_eq!(p.attack, 55);
         assert_eq!(p.defense, 40);
@@ -219,5 +277,17 @@ mod tests {
         assert_eq!(p.format_height(), "0.4 m");
         assert_eq!(p.format_weight(), "6.0 kg");
         assert_eq!(p.base_exp, 112);
+
+        let bulba_json = r#"{
+            "id": 1,
+            "name": "bulbasaur",
+            "types": [
+                {"slot": 1, "type": {"name": "grass"}},
+                {"slot": 2, "type": {"name": "poison"}}
+            ]
+        }"#;
+        let b = PokemonInfo::parse_json(bulba_json).unwrap();
+        assert_eq!(b.primary_type, "grass");
+        assert_eq!(b.secondary_type, Some(String::from("poison")));
     }
 }

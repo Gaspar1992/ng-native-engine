@@ -108,6 +108,49 @@ impl Gtk4Sys {
         unsafe { GtkHandle((self.gtk_drop_down_new_from_strings)(null_list.as_ptr())) }
     }
 
+    pub fn create_image(&self) -> GtkHandle {
+        unsafe {
+            let pic = (self.gtk_picture_new)();
+            (self.gtk_picture_set_can_shrink)(pic, 1);
+            (self.gtk_picture_set_keep_aspect_ratio)(pic, 1);
+            GtkHandle(pic)
+        }
+    }
+
+    pub fn set_image_file(&self, pic: GtkHandle, path: &str) {
+        if let Ok(c_path) = CString::new(path) {
+            unsafe {
+                (self.gtk_picture_set_filename)(pic.0, c_path.as_ptr());
+            }
+        }
+    }
+
+    pub fn set_size_request(&self, widget: GtkHandle, width: i32, height: i32) {
+        unsafe {
+            (self.gtk_widget_set_size_request)(widget.0, width, height);
+        }
+    }
+
+    pub fn create_level_bar(&self) -> GtkHandle {
+        unsafe {
+            let bar = (self.gtk_level_bar_new)();
+            (self.gtk_level_bar_set_max_value)(bar, 255.0);
+            GtkHandle(bar)
+        }
+    }
+
+    pub fn set_level_bar_value(&self, bar: GtkHandle, val: f64) {
+        unsafe {
+            (self.gtk_level_bar_set_value)(bar.0, val);
+        }
+    }
+
+    pub fn set_level_bar_max(&self, bar: GtkHandle, max: f64) {
+        unsafe {
+            (self.gtk_level_bar_set_max_value)(bar.0, max);
+        }
+    }
+
     pub fn set_window_title(&self, win: GtkHandle, title: &str) {
         if let Ok(c_str) = CString::new(title) {
             unsafe {

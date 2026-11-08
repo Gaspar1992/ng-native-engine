@@ -98,6 +98,14 @@ impl<B: PlatformBackend> RenderEngine<B> {
                     "[DropDown #{idx}:{generation} selected={selected} options={options:?}{class_str}]"
                 )
             }
+            WidgetKind::Image { src, width, height } => {
+                format!("[Image #{idx}:{generation} src=\"{src}\" {width}x{height}{class_str}]")
+            }
+            WidgetKind::LevelBar { value, min, max } => {
+                format!(
+                    "[LevelBar #{idx}:{generation} value={value} range={min}..{max}{class_str}]"
+                )
+            }
             WidgetKind::Anchor { comment } => {
                 format!("[Anchor #{idx}:{generation} comment=\"{comment}\"]")
             }
@@ -116,6 +124,8 @@ impl<B: PlatformBackend> RenderEngine<B> {
             WidgetKind::Separator { .. }
             | WidgetKind::Button { .. }
             | WidgetKind::Label { .. }
+            | WidgetKind::Image { .. }
+            | WidgetKind::LevelBar { .. }
             | WidgetKind::Entry { .. }
             | WidgetKind::Switch { .. }
             | WidgetKind::CheckButton { .. }
@@ -253,6 +263,12 @@ impl<B: PlatformBackend> RenderEngine<B> {
             WidgetKind::DropDown { options, selected } => {
                 let current = options.get(*selected).map_or("", String::as_str);
                 Some(format!("  [Select: \"{current}\" ({selected})]"))
+            }
+            WidgetKind::Image { src, width, height } => Some(format!(
+                "  [Image: \"{src}\" ({width}x{height})]{style_summary}"
+            )),
+            WidgetKind::LevelBar { value, max, .. } => {
+                Some(format!("  [LevelBar: {value:.0}/{max:.0}]{style_summary}"))
             }
             WidgetKind::Window { .. } | WidgetKind::Scroll { .. } | WidgetKind::Anchor { .. } => {
                 None

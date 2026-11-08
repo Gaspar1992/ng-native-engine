@@ -45,6 +45,10 @@ impl WinUiBackend {
             }
             "ng-slider" | "ng-scale" | "gtk-scale" => "Microsoft.UI.Xaml.Controls.Slider",
             "ng-select" | "ng-dropdown" | "gtk-drop-down" => "Microsoft.UI.Xaml.Controls.ComboBox",
+            "ng-image" | "gtk-picture" | "ng-picture" => "Microsoft.UI.Xaml.Controls.Image",
+            "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => {
+                "Microsoft.UI.Xaml.Controls.ProgressBar"
+            }
             _ => "Microsoft.UI.Xaml.UIElement",
         }
     }

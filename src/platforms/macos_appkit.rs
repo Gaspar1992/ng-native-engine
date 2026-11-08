@@ -41,6 +41,8 @@ impl MacOsAppKitBackend {
             "ng-checkbox" | "ng-check" | "gtk-check-button" => "NSButtonCheckbox",
             "ng-slider" | "ng-scale" | "gtk-scale" => "NSSlider",
             "ng-select" | "ng-dropdown" | "gtk-drop-down" => "NSPopUpButton",
+            "ng-image" | "gtk-picture" | "ng-picture" => "NSImageView",
+            "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => "NSLevelIndicator",
             _ => "NSView",
         }
     }

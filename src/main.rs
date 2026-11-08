@@ -60,31 +60,87 @@ fn ensure_bundle_compiled(bundle_path: &str) -> String {
     })
 }
 
+struct PokedexUiNodes {
+    hello: Option<NodeId>,
+    lbl: Option<NodeId>,
+    num: Option<NodeId>,
+    sprite: Option<NodeId>,
+    type_primary: Option<NodeId>,
+    type_secondary: Option<NodeId>,
+    height: Option<NodeId>,
+    weight: Option<NodeId>,
+    hp_bar: Option<NodeId>,
+    atk_bar: Option<NodeId>,
+    def_bar: Option<NodeId>,
+    spd_bar: Option<NodeId>,
+}
+
+impl PokedexUiNodes {
+    fn resolve(runtime: &JsRuntime) -> Self {
+        Self {
+            hello: runtime.resolve_var("hello").ok(),
+            lbl: runtime.resolve_var("lbl").ok(),
+            num: runtime.resolve_var("poke_num").ok(),
+            sprite: runtime.resolve_var("poke_sprite").ok(),
+            type_primary: runtime.resolve_var("poke_type_primary").ok(),
+            type_secondary: runtime.resolve_var("poke_type_secondary").ok(),
+            height: runtime.resolve_var("lbl_height").ok(),
+            weight: runtime.resolve_var("lbl_weight").ok(),
+            hp_bar: runtime.resolve_var("hp_bar").ok(),
+            atk_bar: runtime.resolve_var("atk_bar").ok(),
+            def_bar: runtime.resolve_var("def_bar").ok(),
+            spd_bar: runtime.resolve_var("spd_bar").ok(),
+        }
+    }
+}
+
 fn update_pokedex_ui(
     engine: &mut RenderEngine<AnyPlatformBackend>,
-    hello_id: Option<NodeId>,
-    lbl_id: Option<NodeId>,
+    nodes: &PokedexUiNodes,
     poke: &ng_native_engine::desktop::PokemonInfo,
 ) {
-    if let Some(h_id) = hello_id {
-        let _ = engine.set_text(
-            h_id,
-            format!(
-                "#{:03} {}  [{}]",
-                poke.id,
-                poke.display_name().to_uppercase(),
-                poke.primary_type.to_uppercase()
-            ),
-        );
+    if let Some(h) = nodes.hello {
+        let _ = engine.set_text(h, poke.display_name().to_uppercase());
     }
-    if let Some(l_id) = lbl_id {
+    if let Some(n) = nodes.num {
+        let _ = engine.set_text(n, poke.format_id());
+    }
+    if let Some(s) = nodes.sprite {
+        let _ = engine.set_text(s, &poke.sprite_path);
+    }
+    if let Some(tp) = nodes.type_primary {
+        let _ = engine.set_text(tp, poke.primary_type.to_uppercase());
+    }
+    if let Some(ts) = nodes.type_secondary {
+        let sec = poke.secondary_type.as_deref().unwrap_or("").to_uppercase();
+        let _ = engine.set_text(ts, sec);
+    }
+    if let Some(h) = nodes.height {
+        let _ = engine.set_text(h, poke.format_height());
+    }
+    if let Some(w) = nodes.weight {
+        let _ = engine.set_text(w, poke.format_weight());
+    }
+    if let Some(l) = nodes.lbl {
         let _ = engine.set_text(
-            l_id,
+            l,
             format!(
                 "HP: {} | ATK: {} | DEF: {} | SPD: {}",
                 poke.hp, poke.attack, poke.defense, poke.speed
             ),
         );
+    }
+    if let Some(bar) = nodes.hp_bar {
+        let _ = engine.set_attribute(bar, "value", poke.hp.to_string());
+    }
+    if let Some(bar) = nodes.atk_bar {
+        let _ = engine.set_attribute(bar, "value", poke.attack.to_string());
+    }
+    if let Some(bar) = nodes.def_bar {
+        let _ = engine.set_attribute(bar, "value", poke.defense.to_string());
+    }
+    if let Some(bar) = nodes.spd_bar {
+        let _ = engine.set_attribute(bar, "value", poke.speed.to_string());
     }
 }
 
@@ -106,8 +162,12 @@ fn run_interactive_loop(
         ctx.cfg.project_name, ctx.bundle_path
     );
     let mut last_pokedex_id: Option<i64> = None;
-    let hello_id = js_runtime.resolve_var("hello").ok();
-    let lbl_id = js_runtime.resolve_var("lbl").ok();
+    let mut nodes = PokedexUiNodes::resolve(&js_runtime);
+
+    if let Ok(poke) = js_runtime.desktop_mut().fetch_pokemon("1") {
+        update_pokedex_ui(&mut engine, &nodes, &poke);
+        last_pokedex_id = Some(1);
+    }
 
     while engine.backend().open_window_count() > 0 {
         let native_events = engine.backend().step_native_events(false);
@@ -119,13 +179,13 @@ fn run_interactive_loop(
                     && let Ok(poke) = js_runtime.desktop_mut().fetch_pokemon(clean)
                 {
                     println!(
-                        "\n[PokéAPI] Searched '{}' -> #{:03} {} ({})",
+                        "\n[PokéAPI] Searched '{}' -> {} {} ({})",
                         clean,
-                        poke.id,
+                        poke.format_id(),
                         poke.display_name(),
                         poke.primary_type
                     );
-                    update_pokedex_ui(&mut engine, hello_id, lbl_id, &poke);
+                    update_pokedex_ui(&mut engine, &nodes, &poke);
                     last_pokedex_id = Some(i64::from(poke.id));
                 }
             }
@@ -142,18 +202,19 @@ fn run_interactive_loop(
                 .fetch_pokemon(&current_count.to_string())
             {
                 println!(
-                    "\n[PokéAPI] Navigated -> #{:03} {} ({})",
-                    poke.id,
+                    "\n[PokéAPI] Navigated -> {} {} ({})",
+                    poke.format_id(),
                     poke.display_name(),
                     poke.primary_type
                 );
-                update_pokedex_ui(&mut engine, hello_id, lbl_id, &poke);
+                update_pokedex_ui(&mut engine, &nodes, &poke);
             }
             last_pokedex_id = Some(current_count);
         }
 
         if let Some(ref mut server) = hmr_server {
             handle_hmr_messages(server, &mut engine, &mut js_runtime, ctx.win_id);
+            nodes = PokedexUiNodes::resolve(&js_runtime);
         }
 
         let current_mtime = bundle_modified_time(ctx.bundle_path);

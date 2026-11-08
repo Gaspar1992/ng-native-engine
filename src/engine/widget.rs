@@ -58,6 +58,16 @@ pub enum WidgetKind {
         options: Vec<String>,
         selected: usize,
     },
+    Image {
+        src: String,
+        width: u32,
+        height: u32,
+    },
+    LevelBar {
+        value: f64,
+        min: f64,
+        max: f64,
+    },
     Anchor {
         comment: String,
     },
@@ -117,6 +127,16 @@ impl WidgetKind {
                 options: Vec::new(),
                 selected: 0,
             }),
+            "ng-image" | "gtk-picture" | "ng-picture" => Ok(Self::Image {
+                src: String::new(),
+                width: 0,
+                height: 0,
+            }),
+            "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => Ok(Self::LevelBar {
+                value: 0.0,
+                min: 0.0,
+                max: 255.0,
+            }),
             "ng-anchor" | "#comment" => Ok(Self::Anchor {
                 comment: String::new(),
             }),
@@ -141,6 +161,9 @@ impl WidgetKind {
             Self::Label { text: label_text }
             | Self::Entry {
                 text: label_text, ..
+            }
+            | Self::Image {
+                src: label_text, ..
             } => {
                 *label_text = text.into();
             }
@@ -151,7 +174,8 @@ impl WidgetKind {
             | Self::Separator { .. }
             | Self::Switch { .. }
             | Self::Slider { .. }
-            | Self::DropDown { .. } => {
+            | Self::DropDown { .. }
+            | Self::LevelBar { .. } => {
                 return Err(EngineError::InvalidParent(id));
             }
         }
@@ -199,6 +223,8 @@ impl WidgetKind {
             }
             Self::Button { .. }
             | Self::Label { .. }
+            | Self::Image { .. }
+            | Self::LevelBar { .. }
             | Self::Separator { .. }
             | Self::Entry { .. }
             | Self::Switch { .. }
@@ -237,6 +263,8 @@ impl WidgetKind {
             }
             Self::Button { .. }
             | Self::Label { .. }
+            | Self::Image { .. }
+            | Self::LevelBar { .. }
             | Self::Separator { .. }
             | Self::Entry { .. }
             | Self::Switch { .. }
@@ -283,6 +311,8 @@ impl WidgetKind {
             }
             Self::Button { .. }
             | Self::Label { .. }
+            | Self::Image { .. }
+            | Self::LevelBar { .. }
             | Self::Separator { .. }
             | Self::Entry { .. }
             | Self::Switch { .. }
@@ -314,6 +344,8 @@ mod tests {
             "ng-checkbox",
             "ng-slider",
             "ng-select",
+            "ng-image",
+            "ng-level-bar",
             "ng-anchor",
         ] {
             assert!(WidgetKind::from_tag(tag).is_ok(), "Failed to parse {tag}");

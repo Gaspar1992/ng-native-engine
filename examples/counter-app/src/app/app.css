@@ -6,6 +6,20 @@
   border-radius: 14px;
 }
 
+.pokemon-card {
+  background: #313131;
+  color: #ffffff;
+  padding: 16px;
+  gap: 8px;
+  border-radius: 12px;
+}
+
+.poke-num {
+  color: #919191;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .hero-title {
   color: #78aeed;
   padding: 8px;
@@ -15,10 +29,51 @@
 }
 
 .suggested-action {
-  background: #3584e4;
+  background: #e3350d;
   color: #ffffff;
   padding: 12px;
   gap: 8px;
   border-radius: 8px;
+  font-weight: bold;
+}
+
+.badge-grass {
+  background: #9bcc50;
+  color: #212121;
+  padding: 6px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.badge-poison {
+  background: #b97fc9;
+  color: #ffffff;
+  padding: 6px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.specs-panel {
+  background: #30a7d7;
+  color: #ffffff;
+  padding: 10px;
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.spec-label {
+  color: #212121;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.spec-val {
+  color: #212121;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.stats-label {
+  color: #78aeed;
   font-weight: bold;
 }

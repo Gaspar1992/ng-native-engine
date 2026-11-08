@@ -25,6 +25,8 @@ pub(super) enum GtkWidgetType {
     CheckButton,
     Slider,
     DropDown,
+    Image,
+    LevelBar,
     Anchor,
 }
 
@@ -140,6 +142,7 @@ impl GtkLinuxBackend {
                     GtkWidgetType::Button => gtk.set_button_label(handle, text),
                     GtkWidgetType::Entry => gtk.set_entry_text(handle, text),
                     GtkWidgetType::CheckButton => gtk.set_check_button_label(handle, text),
+                    GtkWidgetType::Image => gtk.set_image_file(handle, text),
                     _ => {}
                 }
             }
@@ -250,6 +253,12 @@ impl GtkLinuxBackend {
                     pack_node_id(id),
                 );
                 (Some(dd), GtkWidgetType::DropDown)
+            }
+            "ng-image" | "gtk-picture" | "ng-picture" => {
+                (Some(gtk.create_image()), GtkWidgetType::Image)
+            }
+            "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => {
+                (Some(gtk.create_level_bar()), GtkWidgetType::LevelBar)
             }
             "ng-anchor" | "#comment" => (None, GtkWidgetType::Anchor),
             _ => return,
@@ -384,6 +393,8 @@ impl PlatformBackend for GtkLinuxBackend {
             "ng-checkbox" | "ng-check" | "gtk-check-button" => "GtkCheckButton",
             "ng-slider" | "ng-scale" | "gtk-scale" => "GtkScale",
             "ng-select" | "ng-dropdown" | "gtk-drop-down" => "GtkDropDown",
+            "ng-image" | "gtk-picture" | "ng-picture" => "GtkPicture",
+            "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => "GtkLevelBar",
             "ng-anchor" | "#comment" => "GtkAnchorComment",
             _ => "GtkWidget",
         }

@@ -119,6 +119,42 @@ impl WidgetKind {
                 }
                 _ => {}
             },
+            Self::Image { src, width, height } => match key {
+                "src" => value.clone_into(src),
+                "width" => {
+                    if let Ok(w) = Self::parse_px(value) {
+                        *width = w;
+                    }
+                }
+                "height" => {
+                    if let Ok(h) = Self::parse_px(value) {
+                        *height = h;
+                    }
+                }
+                _ => {}
+            },
+            Self::LevelBar {
+                value: val,
+                min,
+                max,
+            } => match key {
+                "value" => {
+                    if let Ok(v) = value.trim().parse::<f64>() {
+                        *val = v;
+                    }
+                }
+                "min" => {
+                    if let Ok(m) = value.trim().parse::<f64>() {
+                        *min = m;
+                    }
+                }
+                "max" => {
+                    if let Ok(m) = value.trim().parse::<f64>() {
+                        *max = m;
+                    }
+                }
+                _ => {}
+            },
             _ => {}
         }
     }

@@ -21,7 +21,7 @@ fn full_mvp_pipeline_with_headless_backend() {
     // Tick 1: Mount Angular component (signals + styles + template + icon + declarative events)
     runtime.eval_tick(&mut engine, &script).unwrap();
     assert_eq!(engine.backend().frames.len(), 1);
-    assert_eq!(engine.backend().frames[0].len(), 66);
+    assert_eq!(engine.backend().frames[0].len(), 138);
 
     let win = runtime.resolve_var("win").unwrap();
     let hello = runtime.resolve_var("hello").unwrap();

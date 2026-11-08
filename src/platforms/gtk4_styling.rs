@@ -154,6 +154,27 @@ impl GtkLinuxBackend {
                     gtk.set_drop_down_selected(handle, idx);
                 }
             }
+            (GtkWidgetType::Image, "src") => gtk.set_image_file(handle, value),
+            (GtkWidgetType::Image, "width") => {
+                if let Some(w) = Self::parse_px_i32(value) {
+                    gtk.set_size_request(handle, w, -1);
+                }
+            }
+            (GtkWidgetType::Image, "height") => {
+                if let Some(h) = Self::parse_px_i32(value) {
+                    gtk.set_size_request(handle, -1, h);
+                }
+            }
+            (GtkWidgetType::LevelBar, "value") => {
+                if let Ok(v) = value.trim().parse::<f64>() {
+                    gtk.set_level_bar_value(handle, v);
+                }
+            }
+            (GtkWidgetType::LevelBar, "max") => {
+                if let Ok(m) = value.trim().parse::<f64>() {
+                    gtk.set_level_bar_max(handle, m);
+                }
+            }
             _ => {}
         }
     }
