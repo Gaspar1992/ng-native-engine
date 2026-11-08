@@ -1,0 +1,14 @@
+cognitive-complexity-threshold = 15
+too-many-lines-threshold = 100
+too-many-arguments-threshold = 6
+doc-valid-idents = [
+  "GTK4",
+  "Libadwaita",
+  "WinUI",
+  "AppKit",
+  "Angular",
+  "Renderer2",
+  "JavaScript",
+  "NodeJS",
+  "..",
+]

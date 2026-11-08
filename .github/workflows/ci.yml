@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for Angular test bundle)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Compile Angular example bundle
+        run: node examples/counter-app/build-bundle.mjs
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy linter
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run unit and integration tests (Headless Backend)
+        run: cargo test --verbose
