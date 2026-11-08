@@ -31,7 +31,10 @@ pub(super) fn render_gtk_css_rule(rule: &StyleRule) -> String {
 
 impl GtkLinuxBackend {
     pub(super) fn rebuild_css_stylesheet(&self) -> String {
-        let mut css = String::from("window { background: #1e1e1e; color: #ffffff; }\n");
+        let mut css = String::from(
+            "window { background: #1e1e1e; color: #ffffff; }\n\
+             headerbar, windowhandle { min-height: 46px; -gtk-window-dragging: true; }\n",
+        );
         for rule in self.styles.values() {
             css.push_str(&render_gtk_css_rule(rule));
         }

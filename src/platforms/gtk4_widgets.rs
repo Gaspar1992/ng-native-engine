@@ -119,6 +119,8 @@ impl Gtk4Sys {
     pub fn set_window_titlebar(&self, win: GtkHandle, header_bar: GtkHandle) {
         unsafe {
             let handle = (self.gtk_window_handle_new)();
+            (self.gtk_widget_set_hexpand)(handle, 1);
+            (self.gtk_widget_set_hexpand)(header_bar.0, 1);
             (self.gtk_window_handle_set_child)(handle, header_bar.0);
             (self.gtk_window_set_titlebar)(win.0, handle);
         }
@@ -133,6 +135,7 @@ impl Gtk4Sys {
         if let Some(adw_title_new) = self.adw_window_title_new {
             unsafe {
                 let win_title = adw_title_new(title_ptr, sub_ptr);
+                (self.gtk_widget_set_can_target)(win_title, 0);
                 (self.gtk_header_bar_set_title_widget)(hb.0, win_title);
             }
         } else {
@@ -142,12 +145,15 @@ impl Gtk4Sys {
                 self.set_valign(GtkHandle(title_box), "center");
                 let title_lbl = (self.gtk_label_new)(title_ptr);
                 self.add_css_class(GtkHandle(title_lbl), "title");
+                (self.gtk_widget_set_can_target)(title_lbl, 0);
                 (self.gtk_box_append)(title_box, title_lbl);
                 if !subtitle.trim().is_empty() {
                     let sub_lbl = (self.gtk_label_new)(sub_ptr);
                     self.add_css_class(GtkHandle(sub_lbl), "subtitle");
+                    (self.gtk_widget_set_can_target)(sub_lbl, 0);
                     (self.gtk_box_append)(title_box, sub_lbl);
                 }
+                (self.gtk_widget_set_can_target)(title_box, 0);
                 (self.gtk_header_bar_set_title_widget)(hb.0, title_box);
             }
         }
