@@ -17,7 +17,10 @@
     "baseUrl": ".",
     "paths": {
       "@ng-native/platform": ["./packages/platform-native/src/index.ts"],
-      "@ng-native/forms": ["./packages/forms-native/src/index.ts"]
+      "@ng-native/forms": ["./packages/forms-native/src/index.ts"],
+      "@ng-native/router": ["./packages/router-native/src/index.ts"],
+      "@ng-native/http": ["./packages/http-native/src/index.ts"],
+      "@ng-native/desktop": ["./packages/desktop-native/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

@@ -1,3 +1,9 @@
+export interface NativeHttpBridgeResponse {
+  status: number;
+  statusText: string;
+  body: string;
+}
+
 /**
  * Host FFI bridge contract injected at `globalThis.__NG_NATIVE__` by the Rust `JsEngineBackend`
  * (`JscEngine` or `QuickJsEngine`).
@@ -19,6 +25,15 @@ export interface NgNativeBridge {
   onSet(id: string, eventName: string, signalName: string, value?: number): void;
   listen(id: string, eventName: string, callback: (event?: unknown) => void): () => void;
   destroyNode(id: string): void;
+  getSystemTheme(): 'dark' | 'light';
+  setSystemTheme(theme: 'dark' | 'light'): void;
+  getClipboard(): string;
+  setClipboard(text: string): void;
+  sendNotification(title: string, body: string, icon?: string): void;
+  openFileDialog(title?: string, defaultPath?: string): string;
+  saveFileDialog(title?: string, suggestedName?: string): string;
+  registerHttpEndpoint(method: string, url: string, status: number, body: string): void;
+  httpRequest(method: string, url: string, body?: string): NativeHttpBridgeResponse;
   __dispatchEvent(id: string, eventName: string, eventPayload?: unknown): void;
   __flushTimers(): void;
   __drainQueue(): string;
@@ -39,6 +54,9 @@ export function ensureNgNativeBridge(): NgNativeBridge {
   }
 
   let queue: string[] = [];
+  let systemTheme: 'dark' | 'light' = 'dark';
+  let clipboardText = '';
+  const httpEndpoints = new Map<string, NativeHttpBridgeResponse>();
   const listeners = new Map<
     number,
     { id: string; eventName: string; callback: (e?: unknown) => void }
@@ -103,6 +121,45 @@ export function ensureNgNativeBridge(): NgNativeBridge {
     },
     destroyNode(id) {
       queue.push(`destroy ${id}`);
+    },
+    getSystemTheme() {
+      return systemTheme;
+    },
+    setSystemTheme(theme) {
+      systemTheme = theme === 'light' ? 'light' : 'dark';
+    },
+    getClipboard() {
+      return clipboardText;
+    },
+    setClipboard(text) {
+      clipboardText = text;
+    },
+    sendNotification(title, body, icon = 'ng-linux-counter') {
+      queue.push(`comment notify_${nextListenerId++} [${icon}] ${title}: ${body}`);
+    },
+    openFileDialog(_title = 'Open File', defaultPath = '/home/user/document.txt') {
+      return defaultPath;
+    },
+    saveFileDialog(_title = 'Save File', suggestedName = '/home/user/untitled.txt') {
+      return suggestedName;
+    },
+    registerHttpEndpoint(method, url, status, body) {
+      const key = `${method.trim().toUpperCase()} ${url.trim()}`;
+      httpEndpoints.set(key, {
+        status,
+        statusText: status < 400 ? 'OK' : 'Error',
+        body,
+      });
+    },
+    httpRequest(method, url, _body) {
+      const key = `${method.trim().toUpperCase()} ${url.trim()}`;
+      return (
+        httpEndpoints.get(key) ?? {
+          status: 404,
+          statusText: 'Not Found',
+          body: '{"error":"Endpoint not registered"}',
+        }
+      );
     },
     __dispatchEvent(id, eventName, eventPayload = {}) {
       for (const entry of listeners.values()) {

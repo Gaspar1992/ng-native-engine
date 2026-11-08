@@ -33,6 +33,8 @@ ng-native-engine/
 │   ├── main.rs                   # Native engine runner & GTK4 event loop host
 │   ├── config/
 │   │   └── mod.rs                # Angular CLI (angular.json) native target parser
+│   ├── desktop/
+│   │   └── mod.rs                # Desktop OS services (Theme, Clipboard, Notifications, File Dialogs, HTTP)
 │   ├── engine/                   # OS-agnostic core rendering engine (100% safe Rust)
 │   │   ├── mod.rs                # RenderEngine<B> scene graph & frame orchestrator
 │   │   ├── arena.rs              # Generational Arena + runtime BorrowState checker
@@ -45,6 +47,7 @@ ng-native-engine/
 │   │   └── widget.rs             # Cross-platform semantic widget model (ng-window, ng-box, ...)
 │   ├── platforms/                # Concrete OS backend adapters (Bridge + Factory)
 │   │   ├── mod.rs                # PlatformBackend trait & AnyPlatformBackend factory
+│   │   ├── gtk4_callbacks.rs     # Thread-safe GTK4 C signal trampolines & event queue
 │   │   ├── gtk4_sys.rs           # Isolated C FFI dynamic loader for libgtk-4.so.1
 │   │   ├── gtk4_widgets.rs       # Safe GTK4 widget, layout & interactive control wrappers
 │   │   ├── linux_gtk.rs          # Native Linux GTK4 + Freedesktop hicolor icon adapter
@@ -53,14 +56,16 @@ ng-native-engine/
 │   │   └── headless.rs           # Headless frame recorder for automated CI tests
 │   └── runtime/
 │       ├── mod.rs                # Embedded reactive Signal, HMR & event runtime
-│       ├── js_engine.rs          # Pluggable JsEngineBackend trait (JscEngine + QuickJsEngine)
+│       ├── js_engine.rs          # Pluggable JsEngineBackend trait & JscEngine adapter
 │       ├── jsc_sys.rs            # Isolated C FFI dynamic loader for libjavascriptcoregtk-6.0.so.1
+│       ├── quickjs_engine.rs     # Portable zero-JIT QuickJsEngine adapter
 │       └── parser.rs             # Bytecode (.ngb) instruction IR & syntax parser
 ├── packages/
 │   ├── platform-native/          # @ng-native/platform custom Angular 21 Renderer2 package
-│   │   └── src/                  # NativeRenderer2, NativeRendererFactory2 & bootstrapNativeApplication
-│   └── forms-native/             # @ng-native/forms ControlValueAccessor directives (<ng-entry>, <ng-switch>, ...)
-│       └── src/                  # NativeTextValueAccessor, NativeBooleanValueAccessor & NativeNumberValueAccessor
+│   ├── forms-native/             # @ng-native/forms ControlValueAccessor directives (<ng-entry>, <ng-switch>, ...)
+│   ├── router-native/            # @ng-native/router DOM-free NativePlatformLocation & provideNativeRouter()
+│   ├── http-native/              # @ng-native/http NativeHttpBackend & provideNativeHttpClient()
+│   └── desktop-native/           # @ng-native/desktop NativeDesktopService (theme Signal, clipboard, dialogs)
 ├── examples/
 │   └── counter-app/              # Official Angular 21 application workspace
 │       ├── build-bundle.mjs      # Template, CSS, Signal & multi-DPI icon compiler (--watch capable)

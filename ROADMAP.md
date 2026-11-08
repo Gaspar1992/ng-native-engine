@@ -99,18 +99,18 @@ When `@angular/platform-browser` is removed, Angular's Ivy runtime still require
   - [x] Implement `NativeTextValueAccessor`, `NativeBooleanValueAccessor`, and `NativeNumberValueAccessor` for native widgets.
   - [x] Full compatibility with `FormsModule` (`[(ngModel)]`), `ReactiveFormsModule` (`formControl`, `formGroup`, `Validators`), and Angular Signal Forms.
 
-### Phase 5: `@angular/router`, `@angular/common/http`, & Desktop OS APIs (Next Up 🚧)
+### Phase 5: `@angular/router`, `@angular/common/http`, & Desktop OS APIs (Completed ✅)
 
-- [ ] **`@ng-native/router` (`NativePlatformLocation`):**
-  - [ ] Support `<router-outlet>`, `routerLink`, route guards, resolvers, and lazy loading without `window.location`.
-- [ ] **`@ng-native/http` (`NativeHttpBackend`):**
-  - [ ] Implement async HTTP client bridge in Rust (`GIO` / `reqwest`) feeding `HttpClient`, `HttpInterceptorFn`, and `httpResource()`.
-- [ ] **Linux Desktop System Services (`@ng-native/desktop`):**
-  - [ ] Native File Dialogs (`GtkFileDialog` open/save).
-  - [ ] Desktop Notifications (`GNotification`) & System Clipboard (`GdkClipboard`).
-  - [ ] System Dark/Light Theme Signal (`themeSignal`) synchronized with `GtkSettings` / `AdwStyleManager`.
+- [x] **`@ng-native/router` (`NativePlatformLocation` — `packages/router-native`):**
+  - [x] Support `<router-outlet>`, `routerLink`, route guards, resolvers, and lazy loading without `window.location`.
+- [x] **`@ng-native/http` (`NativeHttpBackend` — `packages/http-native`):**
+  - [x] Implement HTTP client bridge in Rust (`DesktopServices` & `__NG_NATIVE__.httpRequest`) feeding `HttpClient`, `HttpInterceptorFn`, and `httpResource()`.
+- [x] **Linux Desktop System Services (`@ng-native/desktop` — `packages/desktop-native`):**
+  - [x] Native File Dialogs (`openFileDialog` / `saveFileDialog`).
+  - [x] Desktop Notifications (`notify`) & System Clipboard (`getClipboardText` / `setClipboardText`).
+  - [x] System Dark/Light Theme Signal (`theme` WritableSignal) synchronized with `DesktopServices`.
 
-### Phase 6: Packaging & Cross-Platform Native Backends (Windows & macOS)
+### Phase 6: Packaging & Cross-Platform Native Backends (Windows & macOS) (Next Up 🚧)
 
 - [ ] **Angular CLI Builder (`@ng-native/builders`):** Single-command `ng build` / `ng serve` integration with hot-reload.
 - [ ] **Linux Distribution Bundler:** Generate self-contained `.deb`, `.rpm`, `AppImage`, and `Flatpak` packages with desktop entries and `hicolor` icon sets.

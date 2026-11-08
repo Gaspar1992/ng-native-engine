@@ -5,6 +5,13 @@ This project adheres to [Conventional Commits](https://www.conventionalcommits.o
 
 ## [Unreleased]
 
+### Features (Phase 5 — `@ng-native/router`, `@ng-native/http`, & `@ng-native/desktop`)
+
+- **router:** create `@ng-native/router` (`packages/router-native`) implementing DOM-free `NativePlatformLocation` (in-memory URL/state history stack, `pushState`, `replaceState`, `back`, `forward`, `onPopState`) and `provideNativeRouter()`.
+- **http:** create `@ng-native/http` (`packages/http-native`) implementing `NativeHttpBackend` and `provideNativeHttpClient()`, compatible with `HttpClient`, `withInterceptors()`, and `httpResource()`.
+- **desktop:** create `src/desktop/mod.rs` (`DesktopServices`) and `@ng-native/desktop` (`packages/desktop-native`) providing `NativeDesktopService` with reactive `theme` Signal (`'dark' | 'light'`), clipboard access, desktop notifications, and file dialogs.
+- **platforms:** extract GTK4 C signal trampolines into `src/platforms/gtk4_callbacks.rs`, extract `QuickJsEngine` into `src/runtime/quickjs_engine.rs`, and wire live GTK4 widget getters (`gtk_editable_get_text`, `gtk_switch_get_active`, `gtk_check_button_get_active`, `gtk_range_get_value`, `gtk_drop_down_get_selected`, `gtk_string_list_new`) into `GtkLinuxBackend` (`8e467a7`).
+
 ### Features (Phase 4 — Interactive Controls & `@ng-native/forms`)
 
 - **widgets:** add `<ng-entry>` (`GtkEntry`), `<ng-switch>` (`GtkSwitch`), `<ng-checkbox>` (`GtkCheckButton`), `<ng-slider>` (`GtkScale`), and `<ng-select>` (`GtkDropDown`) across `WidgetKind`, `RenderEngine` preview, `Gtk4Sys`, `GtkLinuxBackend`, `WinUiBackend`, and `MacOsAppKitBackend`.

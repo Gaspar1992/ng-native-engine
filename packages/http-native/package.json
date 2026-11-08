@@ -1,0 +1,14 @@
+{
+  "name": "@ng-native/http",
+  "version": "0.1.0",
+  "description": "Native Angular HttpBackend bridging HttpClient, interceptors, and httpResource() to the Rust host",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "peerDependencies": {
+    "@angular/common": "^21.0.0",
+    "@angular/core": "^21.0.0",
+    "@ng-native/platform": "0.1.0",
+    "rxjs": "~7.8.0"
+  }
+}

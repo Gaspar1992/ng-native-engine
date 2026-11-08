@@ -354,3 +354,31 @@ fn phase4_interactive_form_controls_and_typed_event_payloads() {
     assert!(updated_preview.contains("[Switch: ON]"));
     assert!(updated_preview.contains("[Slider: 90 (0..100)]"));
 }
+
+#[test]
+fn phase5_desktop_services_and_native_http_bridge() {
+    let js_bundle = r#"
+        __NG_NATIVE__.registerHttpEndpoint("GET", "https://api.ng-native.dev/version", 200, '{"version":"0.5.0"}');
+        const res = __NG_NATIVE__.httpRequest("GET", "https://api.ng-native.dev/version");
+        const parsed = JSON.parse(res.body);
+        __NG_NATIVE__.setSystemTheme("light");
+        __NG_NATIVE__.setClipboard("Clip:" + parsed.version);
+        const clip = __NG_NATIVE__.getClipboard();
+        const theme = __NG_NATIVE__.getSystemTheme();
+        const opened = __NG_NATIVE__.openFileDialog("Open", "/etc/hostname");
+
+        __NG_NATIVE__.createElement("win", "ng-window");
+        __NG_NATIVE__.setText("win", "Phase 5 Desktop Window");
+        __NG_NATIVE__.createElement("lbl", "ng-label");
+        __NG_NATIVE__.setText("lbl", `Theme:${theme} | ${clip} | File:${opened}`);
+        __NG_NATIVE__.appendChild("win", "lbl");
+    "#;
+
+    let mut engine = RenderEngine::new(HeadlessBackend::new());
+    let mut runtime = JsRuntime::from_engine_config("jsc").unwrap();
+    runtime.eval_js(&mut engine, js_bundle).unwrap();
+
+    let win = runtime.resolve_var("win").unwrap();
+    let preview = engine.render_window_preview(win).unwrap();
+    assert!(preview.contains("Theme:light | Clip:0.5.0 | File:/etc/hostname"));
+}

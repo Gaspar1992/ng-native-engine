@@ -14,6 +14,9 @@ globalThis.__NG_NATIVE__ = (() => {
   let nextTimerId = 1;
   let listeners = new Map();
   let nextListenerId = 1;
+  let systemTheme = 'dark';
+  let clipboardText = '';
+  let httpEndpoints = new Map();
 
   globalThis.console = {
     log: (...args) => logs.push(['LOG', args.join(' ')]),
@@ -106,6 +109,43 @@ globalThis.__NG_NATIVE__ = (() => {
     },
     destroyNode(id) {
       queue.push(`destroy ${id}`);
+    },
+    getSystemTheme() {
+      return systemTheme;
+    },
+    setSystemTheme(theme) {
+      systemTheme = theme === 'light' ? 'light' : 'dark';
+    },
+    getClipboard() {
+      return clipboardText;
+    },
+    setClipboard(text) {
+      clipboardText = String(text ?? '');
+    },
+    sendNotification(title, body, icon = 'ng-linux-counter') {
+      queue.push(`comment notify_${nextListenerId++} [${icon}] ${title}: ${body}`);
+    },
+    openFileDialog(_title = 'Open File', defaultPath = '/home/user/document.txt') {
+      return defaultPath;
+    },
+    saveFileDialog(_title = 'Save File', suggestedName = '/home/user/untitled.txt') {
+      return suggestedName;
+    },
+    registerHttpEndpoint(method, url, status, body) {
+      const key = `${String(method).trim().toUpperCase()} ${String(url).trim()}`;
+      httpEndpoints.set(key, {
+        status: Number(status),
+        statusText: Number(status) < 400 ? 'OK' : 'Error',
+        body: String(body ?? ''),
+      });
+    },
+    httpRequest(method, url, _body) {
+      const key = `${String(method).trim().toUpperCase()} ${String(url).trim()}`;
+      return httpEndpoints.get(key) || {
+        status: 404,
+        statusText: 'Not Found',
+        body: JSON.stringify({ error: 'Endpoint not registered' }),
+      };
     },
     __drainQueue() {
       const out = queue.join('\n');

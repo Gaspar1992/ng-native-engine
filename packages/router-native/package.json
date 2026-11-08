@@ -1,0 +1,14 @@
+{
+  "name": "@ng-native/router",
+  "version": "0.1.0",
+  "description": "DOM-free Angular Router PlatformLocation & navigation stack for Native GTK4 / WinUI 3 / AppKit windows",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "peerDependencies": {
+    "@angular/common": "^21.0.0",
+    "@angular/core": "^21.0.0",
+    "@angular/router": "^21.0.0",
+    "@ng-native/platform": "0.1.0"
+  }
+}

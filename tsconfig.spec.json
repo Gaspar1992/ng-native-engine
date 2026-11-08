@@ -9,6 +9,9 @@
   "include": [
     "examples/counter-app/src/**/*.ts",
     "packages/platform-native/src/**/*.ts",
-    "packages/forms-native/src/**/*.ts"
+    "packages/forms-native/src/**/*.ts",
+    "packages/router-native/src/**/*.ts",
+    "packages/http-native/src/**/*.ts",
+    "packages/desktop-native/src/**/*.ts"
   ]
 }
