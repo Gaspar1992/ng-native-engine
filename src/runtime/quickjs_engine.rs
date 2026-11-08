@@ -83,6 +83,64 @@ impl JsEngineBackend for QuickJsEngine {
     }
 
     fn eval_script(&mut self, js_code: &str) -> Result<String, EngineError> {
+        let mut paren_depth = 0i32;
+        let mut brace_depth = 0i32;
+        let mut bracket_depth = 0i32;
+        let mut in_quote: Option<char> = None;
+        let mut prev_char = ' ';
+
+        for ch in js_code.chars() {
+            if let Some(q) = in_quote {
+                if ch == q && prev_char != '\\' {
+                    in_quote = None;
+                }
+            } else {
+                match ch {
+                    '\'' | '"' | '`' => in_quote = Some(ch),
+                    '(' => paren_depth += 1,
+                    ')' => {
+                        paren_depth -= 1;
+                        if paren_depth < 0 {
+                            return Err(EngineError::ScriptSyntaxError(
+                                "SyntaxError: Unexpected token ')'".to_string(),
+                            ));
+                        }
+                    }
+                    '{' => brace_depth += 1,
+                    '}' => {
+                        brace_depth -= 1;
+                        if brace_depth < 0 {
+                            return Err(EngineError::ScriptSyntaxError(
+                                "SyntaxError: Unexpected token '}'".to_string(),
+                            ));
+                        }
+                    }
+                    '[' => bracket_depth += 1,
+                    ']' => {
+                        bracket_depth -= 1;
+                        if bracket_depth < 0 {
+                            return Err(EngineError::ScriptSyntaxError(
+                                "SyntaxError: Unexpected token ']'".to_string(),
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            prev_char = ch;
+        }
+
+        if in_quote.is_some() {
+            return Err(EngineError::ScriptSyntaxError(
+                "SyntaxError: Unterminated string constant".to_string(),
+            ));
+        }
+        if paren_depth != 0 || brace_depth != 0 || bracket_depth != 0 {
+            return Err(EngineError::ScriptSyntaxError(
+                "SyntaxError: Unexpected end of input (unclosed delimiters)".to_string(),
+            ));
+        }
+
         let mut last_result = String::from("undefined");
         for raw_line in js_code.lines() {
             let line = raw_line.trim().trim_end_matches(';').trim();
@@ -90,15 +148,18 @@ impl JsEngineBackend for QuickJsEngine {
                 continue;
             }
             let normalized = line.strip_prefix("globalThis.").unwrap_or(line);
-            if let Some(rest) = normalized.strip_prefix("__NG_NATIVE__.")
-                && let Some(open) = rest.find('(')
-                && let Some(close) = rest.rfind(')')
-            {
-                let method = rest[..open].trim();
-                let args = Self::parse_call_args(&rest[open + 1..close]);
-                self.translate_bridge_call(method, &args)?;
-                if let Some(first) = args.first() {
-                    last_result.clone_from(first);
+            if let Some(rest) = normalized.strip_prefix("__NG_NATIVE__.") {
+                if let (Some(open), Some(close)) = (rest.find('('), rest.rfind(')')) {
+                    let method = rest[..open].trim();
+                    let args = Self::parse_call_args(&rest[open + 1..close]);
+                    self.translate_bridge_call(method, &args)?;
+                    if let Some(first) = args.first() {
+                        last_result.clone_from(first);
+                    }
+                } else {
+                    return Err(EngineError::ScriptSyntaxError(format!(
+                        "Malformed bridge call: {line}"
+                    )));
                 }
             }
         }

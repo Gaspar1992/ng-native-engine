@@ -155,7 +155,9 @@ impl<B: PlatformBackend> RenderEngine<B> {
             self.format_preview_node(hb_id, width, &mut out)?;
         }
 
-        if let Some(child_id) = child_opt {
+        if let Some(child_id) = child_opt
+            && self.arena.get(child_id).is_ok()
+        {
             self.format_preview_node(child_id, width, &mut out)?;
         }
 
