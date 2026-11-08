@@ -1,21 +1,12 @@
 use super::PlatformBackend;
-use crate::engine::{NodeId, RenderCommand, StyleId, StyleRule};
-use std::collections::HashMap;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NativeWinUiControl {
-    pub xaml_class: &'static str,
-    pub text: String,
-    pub attributes: HashMap<String, String>,
-    pub children: Vec<NodeId>,
-}
+use super::scene_state::{NativeSceneNode, NativeSceneState};
+use crate::engine::{NodeId, RenderCommand};
 
 /// Concrete Windows WinUI 3 (`Microsoft.UI.Xaml`) platform adapter.
 #[derive(Default)]
 pub struct WinUiBackend {
     pub flushed_frames: u64,
-    controls: HashMap<NodeId, NativeWinUiControl>,
-    styles: HashMap<StyleId, StyleRule>,
+    state: NativeSceneState,
 }
 
 impl WinUiBackend {
@@ -23,92 +14,19 @@ impl WinUiBackend {
         Self::default()
     }
 
+    pub fn scene_state(&self) -> &NativeSceneState {
+        &self.state
+    }
+
     pub fn control_count(&self) -> usize {
-        self.controls.len()
+        self.state.node_count()
     }
 
-    pub fn get_control(&self, id: NodeId) -> Option<&NativeWinUiControl> {
-        self.controls.get(&id)
+    pub fn get_control(&self, id: NodeId) -> Option<&NativeSceneNode> {
+        self.state.get_node(id)
     }
 
-    fn apply_command(&mut self, cmd: &RenderCommand) {
-        match cmd {
-            RenderCommand::RegisterStyle { style_id, rule } => {
-                self.styles.insert(*style_id, rule.clone());
-            }
-            RenderCommand::CreateWidget { id, tag } => {
-                let xaml_class = self.map_native_widget(tag);
-                self.controls.insert(
-                    *id,
-                    NativeWinUiControl {
-                        xaml_class,
-                        text: String::new(),
-                        attributes: HashMap::new(),
-                        children: Vec::new(),
-                    },
-                );
-            }
-            RenderCommand::CreateComment { id, text } => {
-                self.controls.insert(
-                    *id,
-                    NativeWinUiControl {
-                        xaml_class: "Microsoft.UI.Xaml.AnchorComment",
-                        text: text.clone(),
-                        attributes: HashMap::new(),
-                        children: Vec::new(),
-                    },
-                );
-            }
-            RenderCommand::SetText { id, text } => {
-                if let Some(ctrl) = self.controls.get_mut(id) {
-                    text.clone_into(&mut ctrl.text);
-                }
-            }
-            RenderCommand::SetAttribute { node, key, value } => {
-                if let Some(ctrl) = self.controls.get_mut(node) {
-                    ctrl.attributes.insert(key.clone(), value.clone());
-                }
-            }
-            RenderCommand::AppendChild { parent, child } => {
-                if let Some(p) = self.controls.get_mut(parent) {
-                    p.children.push(*child);
-                }
-            }
-            RenderCommand::InsertBefore {
-                parent,
-                child,
-                ref_child,
-            } => {
-                if let Some(p) = self.controls.get_mut(parent) {
-                    p.children.retain(|c| *c != *child);
-                    if let Some(r) = ref_child
-                        && let Some(pos) = p.children.iter().position(|c| *c == *r)
-                    {
-                        p.children.insert(pos, *child);
-                    } else {
-                        p.children.push(*child);
-                    }
-                }
-            }
-            RenderCommand::RemoveChild { parent, child } => {
-                if let Some(p) = self.controls.get_mut(parent) {
-                    p.children.retain(|c| *c != *child);
-                }
-            }
-            RenderCommand::DestroyWidget { id } => {
-                self.controls.remove(id);
-            }
-            RenderCommand::SetWindowIcon { .. } | RenderCommand::ApplyStyleClass { .. } => {}
-        }
-    }
-}
-
-impl PlatformBackend for WinUiBackend {
-    fn backend_name(&self) -> &str {
-        "Windows WinUI 3"
-    }
-
-    fn map_native_widget(&self, tag: &str) -> &'static str {
+    fn map_winui_tag(tag: &str) -> &'static str {
         match tag {
             "ng-window" | "adw-window" => "Microsoft.UI.Xaml.Window",
             "ng-header-bar" | "adw-header-bar" | "gtk-header-bar" => {
@@ -130,6 +48,16 @@ impl PlatformBackend for WinUiBackend {
             _ => "Microsoft.UI.Xaml.UIElement",
         }
     }
+}
+
+impl PlatformBackend for WinUiBackend {
+    fn backend_name(&self) -> &str {
+        "Windows WinUI 3"
+    }
+
+    fn map_native_widget(&self, tag: &str) -> &'static str {
+        Self::map_winui_tag(tag)
+    }
 
     fn flush_commands(&mut self, commands: &[RenderCommand]) {
         if commands.is_empty() {
@@ -146,12 +74,13 @@ impl PlatformBackend for WinUiBackend {
             if let RenderCommand::CreateWidget { id, tag } = cmd {
                 println!(
                     "  -> CreateWidget {{ id: {id:?}, tag: {tag:?} => native: {} }}",
-                    self.map_native_widget(tag)
+                    Self::map_winui_tag(tag)
                 );
             } else {
                 println!("  -> {cmd:?}");
             }
-            self.apply_command(cmd);
+            self.state
+                .apply_command(cmd, "Microsoft.UI.Xaml.AnchorComment", Self::map_winui_tag);
         }
     }
 }

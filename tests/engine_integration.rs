@@ -401,9 +401,12 @@ fn phase6_linux_distribution_packager_and_winui_appkit_stateful_backends() {
     }
 
     let script = r"
+        style card #242424 #ffffff 16 12
         create win ng-window
         text win CrossPlatform App
+        icon win ng-linux-counter examples/counter-app/public/favicon.ico
         create box ng-box
+        add_class box card
         attr box spacing 12px
         create entry ng-entry
         text entry NativeText
@@ -414,14 +417,35 @@ fn phase6_linux_distribution_packager_and_winui_appkit_stateful_backends() {
     let mut winui_engine = RenderEngine::new(WinUiBackend::new());
     let mut winui_rt = JsRuntime::new();
     winui_rt.eval_tick(&mut winui_engine, script).unwrap();
+    let win_id = winui_rt.resolve_var("win").unwrap();
+    let box_id = winui_rt.resolve_var("box").unwrap();
     let entry_id = winui_rt.resolve_var("entry").unwrap();
     assert_eq!(winui_engine.backend().control_count(), 3);
+    assert_eq!(winui_engine.backend().scene_state().style_count(), 1);
+    assert_eq!(
+        winui_engine
+            .backend()
+            .scene_state()
+            .get_window_icon(win_id)
+            .unwrap()
+            .app_id,
+        "ng-linux-counter"
+    );
+    assert_eq!(
+        winui_engine
+            .backend()
+            .get_control(box_id)
+            .unwrap()
+            .style_classes
+            .len(),
+        1
+    );
     assert_eq!(
         winui_engine
             .backend()
             .get_control(entry_id)
             .unwrap()
-            .xaml_class,
+            .native_class,
         "Microsoft.UI.Xaml.Controls.TextBox"
     );
     assert_eq!(
@@ -434,12 +458,13 @@ fn phase6_linux_distribution_packager_and_winui_appkit_stateful_backends() {
     appkit_rt.eval_tick(&mut appkit_engine, script).unwrap();
     let mac_entry_id = appkit_rt.resolve_var("entry").unwrap();
     assert_eq!(appkit_engine.backend().view_count(), 3);
+    assert_eq!(appkit_engine.backend().scene_state().style_count(), 1);
     assert_eq!(
         appkit_engine
             .backend()
             .get_view(mac_entry_id)
             .unwrap()
-            .cocoa_class,
+            .native_class,
         "NSTextFieldEditable"
     );
     assert_eq!(

@@ -47,6 +47,7 @@
     "eslint": "^10.14.0",
     "eslint-plugin-oxlint": "^1.90.0",
     "jsdom": "^28.0.0",
+    "oxc-parser": "^0.156.0",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.90.0",
     "prettier": "^3.8.1",

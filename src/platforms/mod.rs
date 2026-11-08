@@ -5,12 +5,14 @@ pub mod gtk4_widgets;
 pub mod headless;
 pub mod linux_gtk;
 pub mod macos_appkit;
+pub mod scene_state;
 pub mod windows_winui;
 
 use crate::engine::{NativeEvent, NodeId, RenderCommand};
 pub use headless::HeadlessBackend;
 pub use linux_gtk::GtkLinuxBackend;
 pub use macos_appkit::MacOsAppKitBackend;
+pub use scene_state::{NativeSceneNode, NativeSceneState};
 pub use windows_winui::WinUiBackend;
 
 /// Generic platform interface (Render Hardware Interface / OS Bridge).

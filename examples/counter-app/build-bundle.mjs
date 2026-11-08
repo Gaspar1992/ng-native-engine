@@ -1,55 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { extractComponentMetadata } from './ast-metadata-extractor.mjs';
 import { buildMultiResolutionIcons } from './icon-compiler.mjs';
+
+export { extractComponentMetadata };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, '../..');
-
-/**
- * 1. State & Method Extractor (SRP): Extracts Angular 22 `signal(...)`, fields, and updater methods from `app.ts`.
- */
-export function extractComponentMetadata(tsSource) {
-  const state = {};
-  const numericSignals = {};
-  const methods = {};
-
-  const signalRegex =
-    /(?:protected|public|private|readonly|\s)+([a-zA-Z_]\w*)\s*=\s*signal(?:\s*<[^>]+>)?\(\s*(?:'([^']*)'|"([^"]*)"|(-?\d+)|(true|false))\s*\)/g;
-  let match;
-  while ((match = signalRegex.exec(tsSource)) !== null) {
-    const [, key, singleQuoted, doubleQuoted, numeric, booleanLiteral] = match;
-    state[key] = singleQuoted ?? doubleQuoted ?? numeric ?? booleanLiteral;
-    if (numeric !== undefined) {
-      numericSignals[key] = Number(numeric);
-    }
-  }
-
-  const propRegex = /^\s*([a-zA-Z_]\w*)\s*=\s*(?:'([^']*)'|"([^"]*)"|(-?\d+))\s*;/gm;
-  while ((match = propRegex.exec(tsSource)) !== null) {
-    const [, key, singleQuoted, doubleQuoted, numeric] = match;
-    if (!(key in state)) {
-      state[key] = singleQuoted ?? doubleQuoted ?? numeric;
-    }
-  }
-
-  const updateMethodRegex =
-    /([a-zA-Z_]\w*)\s*\([^)]*\)\s*(?::\s*\w+)?\s*\{\s*this\.([a-zA-Z_]\w*)\.update\(\s*\(?[a-zA-Z_]\w*\)?\s*=>\s*[a-zA-Z_]\w*\s*([+-])\s*(\d+)\s*\)\s*;?\s*\}/g;
-  while ((match = updateMethodRegex.exec(tsSource)) !== null) {
-    const [, methodName, signalName, op, amountStr] = match;
-    const delta = op === '-' ? -Number(amountStr) : Number(amountStr);
-    methods[methodName] = { kind: 'add', signalName, value: delta };
-  }
-
-  const setMethodRegex =
-    /([a-zA-Z_]\w*)\s*\([^)]*\)\s*(?::\s*\w+)?\s*\{\s*this\.([a-zA-Z_]\w*)\.set\(\s*(-?\d+)\s*\)\s*;?\s*\}/g;
-  while ((match = setMethodRegex.exec(tsSource)) !== null) {
-    const [, methodName, signalName, valStr] = match;
-    methods[methodName] = { kind: 'set', signalName, value: Number(valStr) };
-  }
-
-  return { state, numericSignals, methods };
-}
 
 /**
  * 2. Style Parser (SRP): Parses `app.css` into intermediate Style IR.
@@ -300,8 +258,9 @@ export function compileBundle({ rebuildIcons = true } = {}) {
 
   const appDir = resolve(rootDir, projectCfg.sourceRoot, 'app');
   const tsSource = readFileSync(resolve(appDir, 'app.ts'), 'utf8');
-  const htmlSource = readFileSync(resolve(appDir, 'app.html'), 'utf8');
-  const cssSource = readFileSync(resolve(appDir, 'app.css'), 'utf8');
+  const { state, numericSignals, methods, component } = extractComponentMetadata(tsSource);
+  const htmlSource = readFileSync(resolve(appDir, component.templateUrl), 'utf8');
+  const cssSource = readFileSync(resolve(appDir, component.styleUrl), 'utf8');
   const indexHtml = readFileSync(resolve(rootDir, projectCfg.sourceRoot, 'index.html'), 'utf8');
 
   const iconHrefMatch = indexHtml.match(/<link[^>]*rel="icon"[^>]*href="([^"]+)"/);
@@ -309,7 +268,6 @@ export function compileBundle({ rebuildIcons = true } = {}) {
   const iconRelPath = `${projectCfg.root}/public/${iconFileName}`;
   const iconAbsPath = resolve(rootDir, iconRelPath);
 
-  const { state, numericSignals, methods } = extractComponentMetadata(tsSource);
   const styleRules = parseStylesCss(cssSource);
   const templateAst = parseTemplateHtml(htmlSource, state, numericSignals);
 

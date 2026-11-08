@@ -24,5 +24,11 @@ describe('App', () => {
     app.increment();
     app.increment();
     expect(app['count']()).toBe(2);
+
+    app.decrement();
+    expect(app['count']()).toBe(1);
+
+    app.reset();
+    expect(app['count']()).toBe(0);
   });
 });
