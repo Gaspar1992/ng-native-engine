@@ -19,7 +19,8 @@
       "@ng-native/forms": ["./packages/forms-native/src/index.ts"],
       "@ng-native/router": ["./packages/router-native/src/index.ts"],
       "@ng-native/http": ["./packages/http-native/src/index.ts"],
-      "@ng-native/desktop": ["./packages/desktop-native/src/index.ts"]
+      "@ng-native/desktop": ["./packages/desktop-native/src/index.ts"],
+      "@ng-native/builders": ["./packages/builders-native/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

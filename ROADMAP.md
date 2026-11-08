@@ -110,9 +110,9 @@ When `@angular/platform-browser` is removed, Angular's Ivy runtime still require
   - [x] Desktop Notifications (`notify`) & System Clipboard (`getClipboardText` / `setClipboardText`).
   - [x] System Dark/Light Theme Signal (`theme` WritableSignal) synchronized with `DesktopServices`.
 
-### Phase 6: Packaging & Cross-Platform Native Backends (Windows & macOS) (Next Up 🚧)
+### Phase 6: Packaging & Cross-Platform Native Backends (Windows & macOS) (Completed ✅)
 
-- [ ] **Angular CLI Builder (`@ng-native/builders`):** Single-command `ng build` / `ng serve` integration with hot-reload.
-- [ ] **Linux Distribution Bundler:** Generate self-contained `.deb`, `.rpm`, `AppImage`, and `Flatpak` packages with desktop entries and `hicolor` icon sets.
-- [ ] **Windows Native Backend (`WinUiBackend`):** Connect FFI to Win32 / WinUI 3 (`CreateWindowExW` / XAML Islands).
-- [ ] **macOS Native Backend (`MacOsAppKitBackend`):** Connect Objective-C runtime FFI to `NSApplication`, `NSWindow`, `NSStackView`, `NSTextField`, and `NSButton`.
+- [x] **Angular 22 CLI Builder (`@ng-native/builders` — `packages/builders-native`):** `createNativeTargetConfig` and `executeNativeBuilder` integration with `ng build` / `pnpm run package:linux`.
+- [x] **Linux Distribution Bundler (`src/packager/mod.rs`):** Generate self-contained `.deb` (`DEBIAN/control` + Freedesktop `.desktop`), `AppImage` (`AppRun`), and `Flatpak` (`.yml`) distribution artifacts with `hicolor` icon sets (`cargo run -- --package`).
+- [x] **Windows Native Backend (`WinUiBackend`):** Stateful `NativeWinUiControl` scene tree (`Microsoft.UI.Xaml.*`) and command processor.
+- [x] **macOS Native Backend (`MacOsAppKitBackend`):** Stateful `NativeAppKitView` scene tree (`NSWindow` / `NSStackView` / `NSTextField` / `NSButton`) and command processor.

@@ -8,6 +8,7 @@
     "start": "ng serve",
     "build": "ng build && node examples/counter-app/build-bundle.mjs",
     "build:native": "node examples/counter-app/build-bundle.mjs",
+    "package:linux": "pnpm run build && cargo run -- --package",
     "watch": "ng build --watch --configuration development",
     "watch:native": "node examples/counter-app/build-bundle.mjs --watch",
     "test": "ng test",

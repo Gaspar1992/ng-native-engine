@@ -1,0 +1,11 @@
+{
+  "name": "@ng-native/builders",
+  "version": "0.1.0",
+  "description": "Angular 22 CLI Architect builder configuration & native bundle/package orchestrator",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "peerDependencies": {
+    "@angular/core": "^22.0.0"
+  }
+}

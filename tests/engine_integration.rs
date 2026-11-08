@@ -1,6 +1,9 @@
 use ng_native_engine::config::AngularNativeConfig;
 use ng_native_engine::engine::{EngineError, EventPayload, RenderCommand, RenderEngine};
-use ng_native_engine::platforms::{AnyPlatformBackend, HeadlessBackend, PlatformBackend};
+use ng_native_engine::packager::stage_linux_distribution;
+use ng_native_engine::platforms::{
+    AnyPlatformBackend, HeadlessBackend, MacOsAppKitBackend, PlatformBackend, WinUiBackend,
+};
 use ng_native_engine::runtime::JsRuntime;
 use std::fs;
 
@@ -383,4 +386,64 @@ fn phase5_desktop_services_and_native_http_bridge() {
     assert!(preview.contains("Theme:light | Clip:0.5.0 | File:/etc/hostname"));
     assert_eq!(runtime.desktop().theme().as_str(), "light");
     assert_eq!(runtime.desktop().clipboard(), "Clip:0.5.0");
+}
+
+#[test]
+fn phase6_linux_distribution_packager_and_winui_appkit_stateful_backends() {
+    let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
+    let artifacts = stage_linux_distribution(&cfg, "0.2.0").unwrap();
+    assert_eq!(artifacts.len(), 4);
+    for path in &artifacts {
+        assert!(
+            fs::metadata(path).is_ok(),
+            "Missing staged artifact: {path}"
+        );
+    }
+
+    let script = r"
+        create win ng-window
+        text win CrossPlatform App
+        create box ng-box
+        attr box spacing 12px
+        create entry ng-entry
+        text entry NativeText
+        append box entry
+        append win box
+    ";
+
+    let mut winui_engine = RenderEngine::new(WinUiBackend::new());
+    let mut winui_rt = JsRuntime::new();
+    winui_rt.eval_tick(&mut winui_engine, script).unwrap();
+    let entry_id = winui_rt.resolve_var("entry").unwrap();
+    assert_eq!(winui_engine.backend().control_count(), 3);
+    assert_eq!(
+        winui_engine
+            .backend()
+            .get_control(entry_id)
+            .unwrap()
+            .xaml_class,
+        "Microsoft.UI.Xaml.Controls.TextBox"
+    );
+    assert_eq!(
+        winui_engine.backend().get_control(entry_id).unwrap().text,
+        "NativeText"
+    );
+
+    let mut appkit_engine = RenderEngine::new(MacOsAppKitBackend::new());
+    let mut appkit_rt = JsRuntime::new();
+    appkit_rt.eval_tick(&mut appkit_engine, script).unwrap();
+    let mac_entry_id = appkit_rt.resolve_var("entry").unwrap();
+    assert_eq!(appkit_engine.backend().view_count(), 3);
+    assert_eq!(
+        appkit_engine
+            .backend()
+            .get_view(mac_entry_id)
+            .unwrap()
+            .cocoa_class,
+        "NSTextFieldEditable"
+    );
+    assert_eq!(
+        appkit_engine.backend().get_view(mac_entry_id).unwrap().text,
+        "NativeText"
+    );
 }

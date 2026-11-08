@@ -5,6 +5,13 @@ This project adheres to [Conventional Commits](https://www.conventionalcommits.o
 
 ## [Unreleased]
 
+### Features (Phase 6 — `@ng-native/builders`, Linux Distribution Packager, & Stateful Cross-Platform Backends)
+
+- **packager:** add `src/packager/mod.rs` (`stage_linux_distribution`, `generate_debian_control`, `generate_desktop_entry`, `generate_appimage_apprun`, `generate_flatpak_manifest`) and `--package` CLI flag (`pnpm run package:linux`).
+- **builders:** create `@ng-native/builders` (`packages/builders-native`) providing `createNativeTargetConfig` and `executeNativeBuilder` for Angular 22 CLI Architect integration.
+- **platforms:** upgrade `WinUiBackend` (`NativeWinUiControl`) and `MacOsAppKitBackend` (`NativeAppKitView`) to maintain full stateful native widget trees and attributes.
+- **compiler:** modularize `examples/counter-app/build-bundle.mjs` by extracting `examples/counter-app/icon-compiler.mjs` and adding Phase 4 interactive event mappings (`change` -> `toggled`, `valueChange` -> `value-changed`).
+
 ### Features (Angular 22 Upgrade & Post-Phase 5 Hardening)
 
 - **angular:** upgrade workspace and all `@ng-native/*` packages (`platform`, `forms`, `router`, `http`, `desktop`) to **Angular 22 (`22.2.5`)**, `@angular/build` `22.2.6` (powered by Rust `rolldown` `1.2.16` + `oxc-parser` `0.156.0` + `vite` `8.3.5`), and `typescript` `6.0.3` (removing deprecated `baseUrl` in `tsconfig.json` for TS 6/7 compatibility).

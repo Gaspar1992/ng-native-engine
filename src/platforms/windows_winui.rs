@@ -1,15 +1,105 @@
 use super::PlatformBackend;
-use crate::engine::RenderCommand;
+use crate::engine::{NodeId, RenderCommand, StyleId, StyleRule};
+use std::collections::HashMap;
 
-/// Concrete Windows WinUI 3 platform adapter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NativeWinUiControl {
+    pub xaml_class: &'static str,
+    pub text: String,
+    pub attributes: HashMap<String, String>,
+    pub children: Vec<NodeId>,
+}
+
+/// Concrete Windows WinUI 3 (`Microsoft.UI.Xaml`) platform adapter.
 #[derive(Default)]
 pub struct WinUiBackend {
     pub flushed_frames: u64,
+    controls: HashMap<NodeId, NativeWinUiControl>,
+    styles: HashMap<StyleId, StyleRule>,
 }
 
 impl WinUiBackend {
     pub fn new() -> Self {
-        Self { flushed_frames: 0 }
+        Self::default()
+    }
+
+    pub fn control_count(&self) -> usize {
+        self.controls.len()
+    }
+
+    pub fn get_control(&self, id: NodeId) -> Option<&NativeWinUiControl> {
+        self.controls.get(&id)
+    }
+
+    fn apply_command(&mut self, cmd: &RenderCommand) {
+        match cmd {
+            RenderCommand::RegisterStyle { style_id, rule } => {
+                self.styles.insert(*style_id, rule.clone());
+            }
+            RenderCommand::CreateWidget { id, tag } => {
+                let xaml_class = self.map_native_widget(tag);
+                self.controls.insert(
+                    *id,
+                    NativeWinUiControl {
+                        xaml_class,
+                        text: String::new(),
+                        attributes: HashMap::new(),
+                        children: Vec::new(),
+                    },
+                );
+            }
+            RenderCommand::CreateComment { id, text } => {
+                self.controls.insert(
+                    *id,
+                    NativeWinUiControl {
+                        xaml_class: "Microsoft.UI.Xaml.AnchorComment",
+                        text: text.clone(),
+                        attributes: HashMap::new(),
+                        children: Vec::new(),
+                    },
+                );
+            }
+            RenderCommand::SetText { id, text } => {
+                if let Some(ctrl) = self.controls.get_mut(id) {
+                    text.clone_into(&mut ctrl.text);
+                }
+            }
+            RenderCommand::SetAttribute { node, key, value } => {
+                if let Some(ctrl) = self.controls.get_mut(node) {
+                    ctrl.attributes.insert(key.clone(), value.clone());
+                }
+            }
+            RenderCommand::AppendChild { parent, child } => {
+                if let Some(p) = self.controls.get_mut(parent) {
+                    p.children.push(*child);
+                }
+            }
+            RenderCommand::InsertBefore {
+                parent,
+                child,
+                ref_child,
+            } => {
+                if let Some(p) = self.controls.get_mut(parent) {
+                    p.children.retain(|c| *c != *child);
+                    if let Some(r) = ref_child
+                        && let Some(pos) = p.children.iter().position(|c| *c == *r)
+                    {
+                        p.children.insert(pos, *child);
+                    } else {
+                        p.children.push(*child);
+                    }
+                }
+            }
+            RenderCommand::RemoveChild { parent, child } => {
+                if let Some(p) = self.controls.get_mut(parent) {
+                    p.children.retain(|c| *c != *child);
+                }
+            }
+            RenderCommand::DestroyWidget { id } => {
+                self.controls.remove(id);
+            }
+            RenderCommand::SetWindowIcon { .. } | RenderCommand::ApplyStyleClass { .. } => {}
+        }
     }
 }
 
@@ -61,6 +151,7 @@ impl PlatformBackend for WinUiBackend {
             } else {
                 println!("  -> {cmd:?}");
             }
+            self.apply_command(cmd);
         }
     }
 }

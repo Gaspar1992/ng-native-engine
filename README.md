@@ -35,6 +35,8 @@ ng-native-engine/
 │   │   └── mod.rs                # Angular CLI (angular.json) native target parser
 │   ├── desktop/
 │   │   └── mod.rs                # Desktop OS services (Theme, Clipboard, Notifications, File Dialogs, HTTP)
+│   ├── packager/
+│   │   └── mod.rs                # Linux distribution bundler (.deb, AppImage, Flatpak, Freedesktop .desktop)
 │   ├── engine/                   # OS-agnostic core rendering engine (100% safe Rust)
 │   │   ├── mod.rs                # RenderEngine<B> scene graph & frame orchestrator
 │   │   ├── arena.rs              # Generational Arena + runtime BorrowState checker
@@ -67,7 +69,8 @@ ng-native-engine/
 │   ├── forms-native/             # @ng-native/forms ControlValueAccessor directives (<ng-entry>, <ng-switch>, ...)
 │   ├── router-native/            # @ng-native/router DOM-free NativePlatformLocation & provideNativeRouter()
 │   ├── http-native/              # @ng-native/http NativeHttpBackend & provideNativeHttpClient()
-│   └── desktop-native/           # @ng-native/desktop NativeDesktopService (theme Signal, clipboard, dialogs)
+│   ├── desktop-native/           # @ng-native/desktop NativeDesktopService (theme Signal, clipboard, dialogs)
+│   └── builders-native/          # @ng-native/builders Angular 22 Architect builder & packager orchestrator
 ├── examples/
 │   └── counter-app/              # Official Angular 21 application workspace
 │       ├── build-bundle.mjs      # Template, CSS, Signal & multi-DPI icon compiler (--watch capable)
