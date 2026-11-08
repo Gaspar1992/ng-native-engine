@@ -18,7 +18,11 @@ pub trait PlatformBackend {
     fn map_native_widget(&self, tag: &str) -> &'static str {
         match tag {
             "ng-window" | "adw-window" => "NativeWindow",
+            "ng-header-bar" | "adw-header-bar" | "gtk-header-bar" => "NativeHeaderBar",
+            "ng-scroll" | "gtk-scrolled-window" => "NativeScrollView",
             "ng-box" | "gtk-box" => "NativeBox",
+            "ng-grid" | "gtk-grid" => "NativeGrid",
+            "ng-separator" | "gtk-separator" => "NativeSeparator",
             "ng-label" | "gtk-label" => "NativeLabel",
             "ng-button" | "gtk-button" => "NativeButton",
             _ => "NativeWidget",

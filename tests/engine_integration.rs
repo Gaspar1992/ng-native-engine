@@ -144,3 +144,84 @@ fn hot_reload_preserves_signal_state_and_updates_template_and_styles() {
     let next_preview = engine.render_window_preview(win).unwrap();
     assert!(next_preview.contains("Contador HMR: 3"));
 }
+
+#[test]
+fn phase2_scene_graph_containers_attributes_and_anchor_operations() {
+    let mut engine = RenderEngine::new(HeadlessBackend::new());
+    let mut runtime = JsRuntime::new();
+
+    let script = r"
+        create win ng-window
+        text win NgNative Phase 2
+        create hdr ng-header-bar
+        text hdr Panel Principal
+        attr hdr subtitle Libadwaita + GTK4
+        create scroll ng-scroll
+        attr scroll min-height 320px
+        create root_box ng-box
+        attr root_box orientation vertical
+        attr root_box spacing 16px
+        attr root_box hexpand true
+        attr root_box vexpand true
+        attr root_box halign center
+        attr root_box valign start
+        attr root_box margin 12px
+        create grid ng-grid
+        attr grid row-spacing 8px
+        attr grid column-spacing 12px
+        create sep ng-separator
+        attr sep orientation horizontal
+        comment anchor_if @if(showExtra)
+        create lbl_fixed ng-label
+        text lbl_fixed Elemento Fijo
+        append win hdr
+        append win scroll
+        append scroll root_box
+        append root_box grid
+        append root_box sep
+        append root_box anchor_if
+        append root_box lbl_fixed
+    ";
+
+    runtime.eval_tick(&mut engine, script).unwrap();
+
+    let win = runtime.resolve_var("win").unwrap();
+    let hdr = runtime.resolve_var("hdr").unwrap();
+    let scroll = runtime.resolve_var("scroll").unwrap();
+    let root_box = runtime.resolve_var("root_box").unwrap();
+
+    assert_eq!(
+        engine.get_attribute(hdr, "subtitle"),
+        Some("Libadwaita + GTK4")
+    );
+    assert_eq!(engine.get_attribute(scroll, "min-height"), Some("320px"));
+    assert_eq!(engine.get_attribute(root_box, "halign"), Some("center"));
+    assert_eq!(engine.get_attribute(root_box, "margin"), Some("12px"));
+
+    // Dynamically insert a node before the `@if` comment anchor, then remove it
+    let dynamic_insert = r"
+        create lbl_dyn ng-label
+        text lbl_dyn Insertado via @if
+        insert_before root_box lbl_dyn anchor_if
+    ";
+    runtime.eval_tick(&mut engine, dynamic_insert).unwrap();
+
+    let preview_with_dyn = engine.render_window_preview(win).unwrap();
+    assert!(preview_with_dyn.contains("[HeaderBar: Panel Principal — Libadwaita + GTK4]"));
+    assert!(preview_with_dyn.contains("[Grid row-gap:8px col-gap:12px]"));
+    assert!(preview_with_dyn.contains("Insertado via @if"));
+
+    let dyn_idx = preview_with_dyn.find("Insertado via @if").unwrap();
+    let fixed_idx = preview_with_dyn.find("Elemento Fijo").unwrap();
+    assert!(
+        dyn_idx < fixed_idx,
+        "Expected dynamically inserted node before anchor to render ahead of trailing sibling"
+    );
+
+    runtime
+        .eval_tick(&mut engine, "remove_child root_box lbl_dyn")
+        .unwrap();
+    let preview_after_remove = engine.render_window_preview(win).unwrap();
+    assert!(!preview_after_remove.contains("Insertado via @if"));
+    assert!(preview_after_remove.contains("Elemento Fijo"));
+}

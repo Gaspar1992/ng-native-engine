@@ -11,11 +11,15 @@
     "watch": "ng build --watch --configuration development",
     "watch:native": "node examples/counter-app/build-bundle.mjs --watch",
     "test": "ng test",
+    "test:rust": "cargo test",
     "lint": "oxlint . && eslint .",
     "lint:ox": "oxlint .",
     "lint:eslint": "eslint .",
+    "lint:rust": "cargo clippy --all-targets -- -D warnings",
     "format": "oxfmt .",
-    "format:check": "oxfmt --check ."
+    "format:all": "oxfmt . && cargo fmt --all",
+    "format:check": "oxfmt --check .",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run test --watch=false && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test"
   },
   "private": true,
   "packageManager": "pnpm@12.9.1",

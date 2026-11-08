@@ -60,3 +60,16 @@ impl AngularNativeConfig {
         Some(value_part[..end_quote].to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loads_workspace_angular_json_configuration() {
+        let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
+        assert_eq!(cfg.project_name, "ng-linux-counter");
+        assert_eq!(cfg.target_platform, "linux-gtk4");
+        assert_eq!(cfg.output_path, "dist/ng-linux-counter");
+    }
+}

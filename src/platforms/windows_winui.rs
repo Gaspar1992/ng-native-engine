@@ -21,7 +21,13 @@ impl PlatformBackend for WinUiBackend {
     fn map_native_widget(&self, tag: &str) -> &'static str {
         match tag {
             "ng-window" | "adw-window" => "Microsoft.UI.Xaml.Window",
+            "ng-header-bar" | "adw-header-bar" | "gtk-header-bar" => {
+                "Microsoft.UI.Xaml.Controls.TitleBar"
+            }
+            "ng-scroll" | "gtk-scrolled-window" => "Microsoft.UI.Xaml.Controls.ScrollViewer",
             "ng-box" | "gtk-box" => "Microsoft.UI.Xaml.Controls.StackPanel",
+            "ng-grid" | "gtk-grid" => "Microsoft.UI.Xaml.Controls.Grid",
+            "ng-separator" | "gtk-separator" => "Microsoft.UI.Xaml.Controls.AppBarSeparator",
             "ng-label" | "gtk-label" => "Microsoft.UI.Xaml.Controls.TextBlock",
             "ng-button" | "gtk-button" => "Microsoft.UI.Xaml.Controls.Button",
             _ => "Microsoft.UI.Xaml.UIElement",

@@ -21,7 +21,11 @@ impl PlatformBackend for MacOsAppKitBackend {
     fn map_native_widget(&self, tag: &str) -> &'static str {
         match tag {
             "ng-window" | "adw-window" => "NSWindow",
+            "ng-header-bar" | "adw-header-bar" | "gtk-header-bar" => "NSToolbar",
+            "ng-scroll" | "gtk-scrolled-window" => "NSScrollView",
             "ng-box" | "gtk-box" => "NSStackView",
+            "ng-grid" | "gtk-grid" => "NSGridView",
+            "ng-separator" | "gtk-separator" => "NSBoxSeparator",
             "ng-label" | "gtk-label" => "NSTextField",
             "ng-button" | "gtk-button" => "NSButton",
             _ => "NSView",

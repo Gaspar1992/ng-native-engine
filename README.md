@@ -40,6 +40,7 @@ ng-native-engine/
 │   │   ├── events.rs             # Native-to-Angular event listener registry
 │   │   ├── icons.rs              # Binary .ico multi-resolution parser & WindowIconAsset
 │   │   ├── node.rs               # NodeId, StyleId, BorrowState, and EngineError types
+│   │   ├── preview.rs            # Scene graph tree inspector & ASCII window previewer
 │   │   ├── styles.rs             # Deduplicated StyleRegistry (CSS resource manager)
 │   │   └── widget.rs             # Cross-platform semantic widget model (ng-window, ng-box, ...)
 │   ├── platforms/                # Concrete OS backend adapters (Bridge + Factory)
@@ -50,7 +51,8 @@ ng-native-engine/
 │   │   ├── macos_appkit.rs       # macOS AppKit (Cocoa) adapter
 │   │   └── headless.rs           # Headless frame recorder for automated CI tests
 │   └── runtime/
-│       └── mod.rs                # Embedded reactive Signal & bytecode (.ngb) runtime
+│       ├── mod.rs                # Embedded reactive Signal, HMR & event runtime
+│       └── parser.rs             # Bytecode (.ngb) instruction IR & syntax parser
 ├── examples/
 │   └── counter-app/              # Official Angular 21 application workspace
 │       ├── build-bundle.mjs      # Template, CSS, Signal & multi-DPI icon compiler (--watch capable)
@@ -114,15 +116,17 @@ NG_NATIVE_BATCH=1 cargo run
 
 ## 🛠️ Quality & Verification Commands
 
-| Command                                     | Description                                                         |
-| :------------------------------------------ | :------------------------------------------------------------------ |
-| `pnpm run dev`                              | Watch Angular files & hot-reload native GTK4 window in real time    |
-| `pnpm run format`                           | Format TypeScript, HTML, CSS, JSON, and Markdown via `oxfmt`        |
-| `pnpm run format:check`                     | Verify formatting with `oxfmt`                                      |
-| `pnpm run lint`                             | Lint TypeScript & Angular templates via `oxlint` + `angular-eslint` |
-| `cargo fmt --all -- --check`                | Verify Rust formatting                                              |
-| `cargo clippy --all-targets -- -D warnings` | Run strict Rust Clippy lints (pedantic + nursery)                   |
-| `cargo test`                                | Execute unit tests (`Arena`, `IcoParser`) + `HeadlessBackend` E2E   |
+| Command                                     | Description                                                          |
+| :------------------------------------------ | :------------------------------------------------------------------- |
+| `pnpm run dev`                              | Watch Angular files & hot-reload native GTK4 window in real time     |
+| `pnpm run check`                            | Run full verification gate (OxFmt + OxLint + ESLint + Clippy + Test) |
+| `pnpm run format:all`                       | Format both TypeScript/Angular (`oxfmt`) and Rust (`cargo fmt`)      |
+| `pnpm run format`                           | Format TypeScript, HTML, CSS, JSON, and Markdown via `oxfmt`         |
+| `pnpm run format:check`                     | Verify formatting with `oxfmt`                                       |
+| `pnpm run lint`                             | Lint TypeScript & Angular templates via `oxlint` + `angular-eslint`  |
+| `cargo fmt --all -- --check`                | Verify Rust formatting                                               |
+| `cargo clippy --all-targets -- -D warnings` | Run strict Rust Clippy lints (pedantic + nursery)                    |
+| `cargo test`                                | Execute unit tests (`Arena`, `IcoParser`) + `HeadlessBackend` E2E    |
 
 ---
 

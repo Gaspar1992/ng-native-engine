@@ -6,13 +6,51 @@ use super::styles::StyleRule;
 /// Angular mutations are queued during a tick and flushed in batch to the target OS backend.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RenderCommand {
-    CreateWidget { id: NodeId, tag: String },
-    SetText { id: NodeId, text: String },
-    SetWindowIcon { node: NodeId, icon: WindowIconAsset },
-    AppendChild { parent: NodeId, child: NodeId },
-    RegisterStyle { style_id: StyleId, rule: StyleRule },
-    ApplyStyleClass { node: NodeId, style_id: StyleId },
-    DestroyWidget { id: NodeId },
+    CreateWidget {
+        id: NodeId,
+        tag: String,
+    },
+    CreateComment {
+        id: NodeId,
+        text: String,
+    },
+    SetText {
+        id: NodeId,
+        text: String,
+    },
+    SetAttribute {
+        node: NodeId,
+        key: String,
+        value: String,
+    },
+    SetWindowIcon {
+        node: NodeId,
+        icon: WindowIconAsset,
+    },
+    AppendChild {
+        parent: NodeId,
+        child: NodeId,
+    },
+    InsertBefore {
+        parent: NodeId,
+        child: NodeId,
+        ref_child: Option<NodeId>,
+    },
+    RemoveChild {
+        parent: NodeId,
+        child: NodeId,
+    },
+    RegisterStyle {
+        style_id: StyleId,
+        rule: StyleRule,
+    },
+    ApplyStyleClass {
+        node: NodeId,
+        style_id: StyleId,
+    },
+    DestroyWidget {
+        id: NodeId,
+    },
 }
 
 #[derive(Default)]

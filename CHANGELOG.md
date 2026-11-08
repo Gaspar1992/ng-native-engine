@@ -5,11 +5,12 @@ This project adheres to [Conventional Commits](https://www.conventionalcommits.o
 
 ## [Unreleased]
 
-### Planned (Phase 2 — Scene Graph & Layout Primitives)
+### Features (Phase 2 — Scene Graph Completeness & Layout Primitives)
 
-- Add `Comment` / `Anchor` nodes, `insert_before`, and `remove_child` for Angular `@if` / `@for` / `@switch` control flow.
-- Support layout attributes (`orientation`, `spacing`, `hexpand`, `vexpand`, `halign`, `valign`, `margin`) from Angular templates.
-- Expand GTK4 widget catalog (`<ng-header-bar>`, `<ng-scroll>`, `<ng-grid>`, `<ng-entry>`).
+- **engine:** add `Anchor` / `Comment` nodes, `insert_before`, `remove_child`, and `set_attribute` / `get_attribute` to `RenderEngine`, `WidgetKind`, and `RenderCommand`.
+- **widgets:** expand cross-platform and GTK4 FFI catalog (`Gtk4Sys` & `GtkLinuxBackend`) with `<ng-header-bar>`, `<ng-scroll>`, `<ng-grid>`, and `<ng-separator>`.
+- **architecture:** extract scene graph diagnostic preview into `src/engine/preview.rs` and decouple `.ngb` syntax parsing into `src/runtime/parser.rs` (`Instruction` IR).
+- **dx:** emit HTML layout attributes automatically from `build-bundle.mjs`, auto-compile missing `.ngb` bundles on `cargo run`, and add unified `pnpm run check` / `pnpm run format:all` scripts.
 
 ---
 

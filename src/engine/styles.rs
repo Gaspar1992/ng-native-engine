@@ -82,3 +82,44 @@ impl StyleRegistry {
         self.node_styles.remove(&node);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deduplicates_styles_by_class_name_and_tracks_node_classes() {
+        let mut reg = StyleRegistry::new();
+        let node = NodeId {
+            index: 0,
+            generation: 1,
+        };
+
+        let id1 = reg.register_rule(StyleRule {
+            class_name: String::from("card"),
+            background: Some(String::from("#111111")),
+            foreground: None,
+            padding: 8,
+            spacing: 4,
+        });
+        let id2 = reg.register_rule(StyleRule {
+            class_name: String::from("card"),
+            background: Some(String::from("#222222")),
+            foreground: None,
+            padding: 16,
+            spacing: 8,
+        });
+        assert_eq!(id1, id2);
+        assert_eq!(reg.get_rule(id1).unwrap().padding, 16);
+
+        assert_eq!(
+            reg.attach_class(node, "missing"),
+            Err(EngineError::StyleNotFound(String::from("missing")))
+        );
+        assert_eq!(reg.attach_class(node, "card").unwrap(), id1);
+        assert_eq!(reg.node_classes(node), vec!["card"]);
+
+        reg.remove_node(node);
+        assert_eq!(reg.node_classes(node), Vec::<&str>::new());
+    }
+}

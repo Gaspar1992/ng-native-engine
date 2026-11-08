@@ -50,3 +50,33 @@ impl EventRegistry {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn registers_filters_and_cleans_up_node_listeners() {
+        let mut events = EventRegistry::new();
+        let n1 = NodeId {
+            index: 1,
+            generation: 1,
+        };
+        let n2 = NodeId {
+            index: 2,
+            generation: 1,
+        };
+
+        events.register(n1, "clicked", 10);
+        events.register(n1, "clicked", 11);
+        events.register(n2, "clicked", 20);
+
+        assert_eq!(events.matching_listeners(n1, "clicked"), vec![10, 11]);
+        assert!(events.unregister(10));
+        assert_eq!(events.matching_listeners(n1, "clicked"), vec![11]);
+
+        events.remove_for_node(n1);
+        assert_eq!(events.matching_listeners(n1, "clicked"), Vec::<u64>::new());
+        assert_eq!(events.matching_listeners(n2, "clicked"), vec![20]);
+    }
+}

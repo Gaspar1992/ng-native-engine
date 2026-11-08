@@ -97,15 +97,36 @@ function interpolate(text, state) {
 /**
  * 3. Template Parser (SRP): Parses `app.html` into a hierarchical AST including reactive bindings & events.
  */
-function parseTemplateHtml(html, state, numericSignals) {
-  const tokenRegex = /<\/?([a-zA-Z0-9-]+)([^>]*)>|([^<]+)/g;
+export function parseTemplateHtml(html, state, numericSignals) {
+  const tokenRegex = /<!--([\s\S]*?)-->|<\/?([a-zA-Z0-9-]+)([^>]*)>|([^<]+)/g;
   const rootNodes = [];
   const stack = [];
   let autoIdCounter = 1;
   let match;
 
   while ((match = tokenRegex.exec(html)) !== null) {
-    const [fullToken, tagName, attrString, textNode] = match;
+    const [fullToken, commentBody, tagName, attrString, textNode] = match;
+
+    if (commentBody !== undefined) {
+      const commentNode = {
+        id: `anchor_${autoIdCounter++}`,
+        tag: '#comment',
+        isComment: true,
+        text: commentBody.trim() || 'anchor',
+        title: null,
+        classes: [],
+        attributes: {},
+        reactiveBinding: null,
+        events: {},
+        children: [],
+      };
+      if (stack.length === 0) {
+        rootNodes.push(commentNode);
+      } else {
+        stack[stack.length - 1].children.push(commentNode);
+      }
+      continue;
+    }
 
     if (textNode !== undefined) {
       const rawTrimmed = textNode.trim();
@@ -148,11 +169,19 @@ function parseTemplateHtml(html, state, numericSignals) {
       }
     }
 
+    const customAttrs = {};
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k !== 'id' && k !== 'title' && k !== 'class') {
+        customAttrs[k] = v;
+      }
+    }
+
     const node = {
       id: attrs.id || `node_${autoIdCounter++}`,
       tag: tagName,
       title: attrs.title || null,
       classes: attrs.class ? attrs.class.split(/\s+/).filter(Boolean) : [],
+      attributes: customAttrs,
       text: null,
       reactiveBinding: null,
       events,
@@ -320,7 +349,14 @@ function buildMultiResolutionIcons(icoAbsPath, appId, outDir, windowTitle) {
 /**
  * 5. Bytecode Emitter (SRP): Translates Styles IR + Signals + Icons + Template AST into `.ngb` instructions.
  */
-function emitNgbBundle(styleRules, numericSignals, methods, astRoots, iconMeta, sourceLabel) {
+export function emitNgbBundle(
+  styleRules,
+  numericSignals,
+  methods,
+  astRoots,
+  iconMeta,
+  sourceLabel,
+) {
   const lines = [`// Auto-compiled by Angular Native Template Compiler from ${sourceLabel}`];
 
   for (const [sigName, initialValue] of Object.entries(numericSignals)) {
@@ -337,6 +373,11 @@ function emitNgbBundle(styleRules, numericSignals, methods, astRoots, iconMeta, 
   const bindingInstructions = [];
 
   function visitNode(node) {
+    if (node.isComment) {
+      lines.push(`comment ${node.id} ${node.text}`);
+      return;
+    }
+
     lines.push(`create ${node.id} ${node.tag}`);
 
     if (node.title) {
@@ -347,6 +388,10 @@ function emitNgbBundle(styleRules, numericSignals, methods, astRoots, iconMeta, 
 
     if ((node.tag === 'ng-window' || node.tag === 'adw-window') && iconMeta) {
       lines.push(`icon ${node.id} ${iconMeta.appId} ${iconMeta.relPath}`);
+    }
+
+    for (const [attrKey, attrVal] of Object.entries(node.attributes || {})) {
+      lines.push(`attr ${node.id} ${attrKey} ${attrVal}`);
     }
 
     for (const cls of node.classes) {

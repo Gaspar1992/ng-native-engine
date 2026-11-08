@@ -14,7 +14,8 @@ unsafe extern "C" {
 }
 
 const RTLD_LAZY: c_int = 1;
-const GTK_ORIENTATION_VERTICAL: c_int = 1;
+pub const GTK_ORIENTATION_HORIZONTAL: c_int = 0;
+pub const GTK_ORIENTATION_VERTICAL: c_int = 1;
 const GTK_STYLE_PROVIDER_PRIORITY_APPLICATION: c_uint = 600;
 
 pub type GtkClickCallback = unsafe extern "C" fn(*mut c_void, *mut c_void);
@@ -26,6 +27,7 @@ pub struct Gtk4Sys {
     gtk_icon_theme_add_search_path: unsafe extern "C" fn(*mut c_void, *const c_char),
     gtk_window_new: unsafe extern "C" fn() -> *mut c_void,
     gtk_window_set_title: unsafe extern "C" fn(*mut c_void, *const c_char),
+    gtk_window_set_titlebar: unsafe extern "C" fn(*mut c_void, *mut c_void),
     gtk_window_set_icon_name: unsafe extern "C" fn(*mut c_void, *const c_char),
     gtk_window_set_default_icon_name: unsafe extern "C" fn(*const c_char),
     gtk_window_set_default_size: unsafe extern "C" fn(*mut c_void, c_int, c_int),
@@ -33,13 +35,32 @@ pub struct Gtk4Sys {
     gtk_window_present: unsafe extern "C" fn(*mut c_void),
     gtk_window_destroy: unsafe extern "C" fn(*mut c_void),
     gtk_window_get_toplevels: unsafe extern "C" fn() -> *mut c_void,
+    gtk_header_bar_new: unsafe extern "C" fn() -> *mut c_void,
+    gtk_header_bar_set_show_title_buttons: unsafe extern "C" fn(*mut c_void, c_int),
+    gtk_header_bar_pack_end: unsafe extern "C" fn(*mut c_void, *mut c_void),
+    gtk_scrolled_window_new: unsafe extern "C" fn() -> *mut c_void,
+    gtk_scrolled_window_set_child: unsafe extern "C" fn(*mut c_void, *mut c_void),
+    gtk_scrolled_window_set_min_content_height: unsafe extern "C" fn(*mut c_void, c_int),
     gtk_box_new: unsafe extern "C" fn(c_int, c_int) -> *mut c_void,
     gtk_box_append: unsafe extern "C" fn(*mut c_void, *mut c_void),
+    gtk_box_remove: unsafe extern "C" fn(*mut c_void, *mut c_void),
+    gtk_box_insert_child_after: unsafe extern "C" fn(*mut c_void, *mut c_void, *mut c_void),
+    gtk_box_set_spacing: unsafe extern "C" fn(*mut c_void, c_int),
+    gtk_grid_new: unsafe extern "C" fn() -> *mut c_void,
+    gtk_grid_attach: unsafe extern "C" fn(*mut c_void, *mut c_void, c_int, c_int, c_int, c_int),
+    gtk_grid_set_row_spacing: unsafe extern "C" fn(*mut c_void, c_uint),
+    gtk_grid_set_column_spacing: unsafe extern "C" fn(*mut c_void, c_uint),
+    gtk_separator_new: unsafe extern "C" fn(c_int) -> *mut c_void,
+    gtk_orientable_set_orientation: unsafe extern "C" fn(*mut c_void, c_int),
     gtk_label_new: unsafe extern "C" fn(*const c_char) -> *mut c_void,
     gtk_label_set_text: unsafe extern "C" fn(*mut c_void, *const c_char),
     gtk_button_new_with_label: unsafe extern "C" fn(*const c_char) -> *mut c_void,
     gtk_button_set_label: unsafe extern "C" fn(*mut c_void, *const c_char),
     gtk_widget_add_css_class: unsafe extern "C" fn(*mut c_void, *const c_char),
+    gtk_widget_set_hexpand: unsafe extern "C" fn(*mut c_void, c_int),
+    gtk_widget_set_vexpand: unsafe extern "C" fn(*mut c_void, c_int),
+    gtk_widget_set_halign: unsafe extern "C" fn(*mut c_void, c_int),
+    gtk_widget_set_valign: unsafe extern "C" fn(*mut c_void, c_int),
     gtk_widget_set_margin_top: unsafe extern "C" fn(*mut c_void, c_int),
     gtk_widget_set_margin_bottom: unsafe extern "C" fn(*mut c_void, c_int),
     gtk_widget_set_margin_start: unsafe extern "C" fn(*mut c_void, c_int),
@@ -92,6 +113,7 @@ impl Gtk4Sys {
                 )?,
                 gtk_window_new: Self::load_fn(gtk_lib, c"gtk_window_new")?,
                 gtk_window_set_title: Self::load_fn(gtk_lib, c"gtk_window_set_title")?,
+                gtk_window_set_titlebar: Self::load_fn(gtk_lib, c"gtk_window_set_titlebar")?,
                 gtk_window_set_icon_name: Self::load_fn(gtk_lib, c"gtk_window_set_icon_name")?,
                 gtk_window_set_default_icon_name: Self::load_fn(
                     gtk_lib,
@@ -105,13 +127,47 @@ impl Gtk4Sys {
                 gtk_window_present: Self::load_fn(gtk_lib, c"gtk_window_present")?,
                 gtk_window_destroy: Self::load_fn(gtk_lib, c"gtk_window_destroy")?,
                 gtk_window_get_toplevels: Self::load_fn(gtk_lib, c"gtk_window_get_toplevels")?,
+                gtk_header_bar_new: Self::load_fn(gtk_lib, c"gtk_header_bar_new")?,
+                gtk_header_bar_set_show_title_buttons: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_header_bar_set_show_title_buttons",
+                )?,
+                gtk_header_bar_pack_end: Self::load_fn(gtk_lib, c"gtk_header_bar_pack_end")?,
+                gtk_scrolled_window_new: Self::load_fn(gtk_lib, c"gtk_scrolled_window_new")?,
+                gtk_scrolled_window_set_child: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_scrolled_window_set_child",
+                )?,
+                gtk_scrolled_window_set_min_content_height: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_scrolled_window_set_min_content_height",
+                )?,
                 gtk_box_new: Self::load_fn(gtk_lib, c"gtk_box_new")?,
                 gtk_box_append: Self::load_fn(gtk_lib, c"gtk_box_append")?,
+                gtk_box_remove: Self::load_fn(gtk_lib, c"gtk_box_remove")?,
+                gtk_box_insert_child_after: Self::load_fn(gtk_lib, c"gtk_box_insert_child_after")?,
+                gtk_box_set_spacing: Self::load_fn(gtk_lib, c"gtk_box_set_spacing")?,
+                gtk_grid_new: Self::load_fn(gtk_lib, c"gtk_grid_new")?,
+                gtk_grid_attach: Self::load_fn(gtk_lib, c"gtk_grid_attach")?,
+                gtk_grid_set_row_spacing: Self::load_fn(gtk_lib, c"gtk_grid_set_row_spacing")?,
+                gtk_grid_set_column_spacing: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_grid_set_column_spacing",
+                )?,
+                gtk_separator_new: Self::load_fn(gtk_lib, c"gtk_separator_new")?,
+                gtk_orientable_set_orientation: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_orientable_set_orientation",
+                )?,
                 gtk_label_new: Self::load_fn(gtk_lib, c"gtk_label_new")?,
                 gtk_label_set_text: Self::load_fn(gtk_lib, c"gtk_label_set_text")?,
                 gtk_button_new_with_label: Self::load_fn(gtk_lib, c"gtk_button_new_with_label")?,
                 gtk_button_set_label: Self::load_fn(gtk_lib, c"gtk_button_set_label")?,
                 gtk_widget_add_css_class: Self::load_fn(gtk_lib, c"gtk_widget_add_css_class")?,
+                gtk_widget_set_hexpand: Self::load_fn(gtk_lib, c"gtk_widget_set_hexpand")?,
+                gtk_widget_set_vexpand: Self::load_fn(gtk_lib, c"gtk_widget_set_vexpand")?,
+                gtk_widget_set_halign: Self::load_fn(gtk_lib, c"gtk_widget_set_halign")?,
+                gtk_widget_set_valign: Self::load_fn(gtk_lib, c"gtk_widget_set_valign")?,
                 gtk_widget_set_margin_top: Self::load_fn(gtk_lib, c"gtk_widget_set_margin_top")?,
                 gtk_widget_set_margin_bottom: Self::load_fn(
                     gtk_lib,
@@ -224,15 +280,28 @@ impl Gtk4Sys {
         }
     }
 
+    pub fn create_header_bar(&self) -> GtkHandle {
+        unsafe { GtkHandle((self.gtk_header_bar_new)()) }
+    }
+
+    pub fn create_scrolled_window(&self) -> GtkHandle {
+        unsafe { GtkHandle((self.gtk_scrolled_window_new)()) }
+    }
+
     pub fn create_box(&self, spacing: i32) -> GtkHandle {
         unsafe {
             let bx = (self.gtk_box_new)(GTK_ORIENTATION_VERTICAL, spacing);
-            (self.gtk_widget_set_margin_top)(bx, 20);
-            (self.gtk_widget_set_margin_bottom)(bx, 20);
-            (self.gtk_widget_set_margin_start)(bx, 20);
-            (self.gtk_widget_set_margin_end)(bx, 20);
+            self.set_uniform_margin(GtkHandle(bx), 20);
             GtkHandle(bx)
         }
+    }
+
+    pub fn create_grid(&self) -> GtkHandle {
+        unsafe { GtkHandle((self.gtk_grid_new)()) }
+    }
+
+    pub fn create_separator(&self) -> GtkHandle {
+        unsafe { GtkHandle((self.gtk_separator_new)(GTK_ORIENTATION_HORIZONTAL)) }
     }
 
     pub fn create_label(&self) -> GtkHandle {
@@ -247,6 +316,126 @@ impl Gtk4Sys {
         if let Ok(c_str) = CString::new(title) {
             unsafe {
                 (self.gtk_window_set_title)(win.0, c_str.as_ptr());
+            }
+        }
+    }
+
+    pub fn set_window_titlebar(&self, win: GtkHandle, header_bar: GtkHandle) {
+        unsafe {
+            (self.gtk_window_set_titlebar)(win.0, header_bar.0);
+        }
+    }
+
+    pub fn set_header_bar_show_title_buttons(&self, hb: GtkHandle, show: bool) {
+        unsafe {
+            (self.gtk_header_bar_set_show_title_buttons)(hb.0, i32::from(show));
+        }
+    }
+
+    pub fn header_bar_pack_end(&self, hb: GtkHandle, child: GtkHandle) {
+        unsafe {
+            (self.gtk_header_bar_pack_end)(hb.0, child.0);
+        }
+    }
+
+    pub fn set_scrolled_child(&self, scroll: GtkHandle, child: GtkHandle) {
+        unsafe {
+            (self.gtk_scrolled_window_set_child)(scroll.0, child.0);
+        }
+    }
+
+    pub fn set_scrolled_min_height(&self, scroll: GtkHandle, min_height: i32) {
+        unsafe {
+            (self.gtk_scrolled_window_set_min_content_height)(scroll.0, min_height);
+        }
+    }
+
+    pub fn set_orientation(&self, widget: GtkHandle, vertical: bool) {
+        let orient = if vertical {
+            GTK_ORIENTATION_VERTICAL
+        } else {
+            GTK_ORIENTATION_HORIZONTAL
+        };
+        unsafe {
+            (self.gtk_orientable_set_orientation)(widget.0, orient);
+        }
+    }
+
+    pub fn set_box_spacing(&self, bx: GtkHandle, spacing: i32) {
+        unsafe {
+            (self.gtk_box_set_spacing)(bx.0, spacing);
+        }
+    }
+
+    pub fn set_grid_row_spacing(&self, grid: GtkHandle, row_spacing: u32) {
+        unsafe {
+            (self.gtk_grid_set_row_spacing)(grid.0, row_spacing);
+        }
+    }
+
+    pub fn set_grid_column_spacing(&self, grid: GtkHandle, col_spacing: u32) {
+        unsafe {
+            (self.gtk_grid_set_column_spacing)(grid.0, col_spacing);
+        }
+    }
+
+    pub fn grid_attach(&self, grid: GtkHandle, child: GtkHandle, col: i32, row: i32) {
+        unsafe {
+            (self.gtk_grid_attach)(grid.0, child.0, col, row, 1, 1);
+        }
+    }
+
+    pub fn set_hexpand(&self, widget: GtkHandle, expand: bool) {
+        unsafe {
+            (self.gtk_widget_set_hexpand)(widget.0, i32::from(expand));
+        }
+    }
+
+    pub fn set_vexpand(&self, widget: GtkHandle, expand: bool) {
+        unsafe {
+            (self.gtk_widget_set_vexpand)(widget.0, i32::from(expand));
+        }
+    }
+
+    fn parse_gtk_align(align: &str) -> c_int {
+        match align.trim() {
+            "start" => 1,
+            "end" => 2,
+            "center" => 3,
+            "baseline" => 4,
+            _ => 0,
+        }
+    }
+
+    pub fn set_halign(&self, widget: GtkHandle, align: &str) {
+        unsafe {
+            (self.gtk_widget_set_halign)(widget.0, Self::parse_gtk_align(align));
+        }
+    }
+
+    pub fn set_valign(&self, widget: GtkHandle, align: &str) {
+        unsafe {
+            (self.gtk_widget_set_valign)(widget.0, Self::parse_gtk_align(align));
+        }
+    }
+
+    pub fn set_uniform_margin(&self, widget: GtkHandle, margin: i32) {
+        unsafe {
+            (self.gtk_widget_set_margin_top)(widget.0, margin);
+            (self.gtk_widget_set_margin_bottom)(widget.0, margin);
+            (self.gtk_widget_set_margin_start)(widget.0, margin);
+            (self.gtk_widget_set_margin_end)(widget.0, margin);
+        }
+    }
+
+    pub fn set_margin_side(&self, widget: GtkHandle, side: &str, margin: i32) {
+        unsafe {
+            match side {
+                "margin-top" => (self.gtk_widget_set_margin_top)(widget.0, margin),
+                "margin-bottom" => (self.gtk_widget_set_margin_bottom)(widget.0, margin),
+                "margin-start" => (self.gtk_widget_set_margin_start)(widget.0, margin),
+                "margin-end" => (self.gtk_widget_set_margin_end)(widget.0, margin),
+                _ => {}
             }
         }
     }
@@ -285,6 +474,19 @@ impl Gtk4Sys {
     pub fn box_append(&self, bx: GtkHandle, child: GtkHandle) {
         unsafe {
             (self.gtk_box_append)(bx.0, child.0);
+        }
+    }
+
+    pub fn box_insert_after(&self, bx: GtkHandle, child: GtkHandle, sibling: Option<GtkHandle>) {
+        let sib_ptr = sibling.map_or(std::ptr::null_mut(), |h| h.0);
+        unsafe {
+            (self.gtk_box_insert_child_after)(bx.0, child.0, sib_ptr);
+        }
+    }
+
+    pub fn box_remove(&self, bx: GtkHandle, child: GtkHandle) {
+        unsafe {
+            (self.gtk_box_remove)(bx.0, child.0);
         }
     }
 

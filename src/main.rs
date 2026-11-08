@@ -4,6 +4,8 @@ use ng_native_engine::platforms::AnyPlatformBackend;
 use ng_native_engine::runtime::JsRuntime;
 use std::env;
 use std::fs;
+use std::path::Path;
+use std::process::Command;
 use std::thread;
 use std::time::{Duration, SystemTime};
 
@@ -11,13 +13,25 @@ fn bundle_modified_time(path: &str) -> Option<SystemTime> {
     fs::metadata(path).and_then(|m| m.modified()).ok()
 }
 
+fn ensure_bundle_compiled(bundle_path: &str) -> String {
+    if !Path::new(bundle_path).exists() {
+        println!(
+            "[NgNative CLI] Bundle not found at '{bundle_path}'. Auto-compiling via build-bundle.mjs..."
+        );
+        let _ = Command::new("node")
+            .arg("examples/counter-app/build-bundle.mjs")
+            .status();
+    }
+    fs::read_to_string(bundle_path).unwrap_or_else(|_| {
+        panic!("Bundle not found at '{bundle_path}'. Run `pnpm run build` first.")
+    })
+}
+
 fn main() {
     // 1. Read `angular.json` to configure the project & target platform
     let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
     let bundle_path = format!("{}/main.ngb", cfg.output_path);
-    let bootstrap_script = fs::read_to_string(&bundle_path).unwrap_or_else(|_| {
-        panic!("Bundle not found at '{bundle_path}'. Run `pnpm run build` first.")
-    });
+    let bootstrap_script = ensure_bundle_compiled(&bundle_path);
     let mut last_mtime = bundle_modified_time(&bundle_path);
 
     println!(

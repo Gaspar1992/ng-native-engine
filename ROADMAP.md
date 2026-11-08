@@ -68,17 +68,17 @@ When `@angular/platform-browser` is removed, Angular's Ivy runtime still require
 - [x] Multi-resolution `.ico` parser (`WindowIconAsset`) + Freedesktop `hicolor` (`16x16`..`256x256`) & Wayland/KDE Plasma taskbar integration.
 - [x] Declarative template compiler (`build-bundle.mjs`) supporting initial Signals (`signal()`, `.update()`, `.set()`) and `(click)` events.
 
-### Phase 2: Scene Graph Completeness & Layout Primitives (Next Up 🚧)
+### Phase 2: Scene Graph Completeness & Layout Primitives (Completed ✅)
 
-- [ ] **Scene Graph Anchor & Sibling Operations:** Add `Comment` / `Anchor` nodes, `insert_before(parent, new_child, ref_child)`, and `remove_child(parent, child)` to `Arena`, `WidgetKind`, `RenderCommand`, and `GtkLinuxBackend`.
-- [ ] **Attribute & Property Pipeline (`setAttribute` / `setProperty`):** Support layout attributes directly from Angular templates (`orientation="horizontal"`, `spacing="16"`, `hexpand="true"`, `vexpand="true"`, `halign="center"`, `valign="center"`, `margin="12"`).
-- [ ] **Expanded GTK4 / Libadwaita Container Catalog:**
-  - [ ] `<ng-header-bar>` (`GtkHeaderBar` / `AdwHeaderBar`)
-  - [ ] `<ng-scroll>` (`GtkScrolledWindow`)
-  - [ ] `<ng-grid>` (`GtkGrid`)
-  - [ ] `<ng-Separator>` (`GtkSeparator`)
+- [x] **Scene Graph Anchor & Sibling Operations:** Add `Comment` / `Anchor` nodes, `insert_before(parent, new_child, ref_child)`, and `remove_child(parent, child)` to `Arena`, `WidgetKind`, `RenderCommand`, and `GtkLinuxBackend`.
+- [x] **Attribute & Property Pipeline (`setAttribute` / `setProperty`):** Support layout attributes directly from Angular templates (`orientation="horizontal"`, `spacing="16"`, `hexpand="true"`, `vexpand="true"`, `halign="center"`, `valign="center"`, `margin="12"`).
+- [x] **Expanded GTK4 / Libadwaita Container Catalog:**
+  - [x] `<ng-header-bar>` (`GtkHeaderBar` / `AdwHeaderBar`)
+  - [x] `<ng-scroll>` (`GtkScrolledWindow`)
+  - [x] `<ng-grid>` (`GtkGrid`)
+  - [x] `<ng-separator>` (`GtkSeparator`)
 
-### Phase 3: Embedded JS Engine & Custom `@ng-native/platform` (100% Ivy Runtime)
+### Phase 3: Embedded JS Engine & Custom `@ng-native/platform` (Next Up 🚧)
 
 - [ ] **Embed QuickJS-NG (`rquickjs`) in Rust:** Execute standard ES2022 bundles produced by `@angular/build:application` directly inside the Rust process.
 - [ ] **Bridge `glib::MainContext` + JS Microtask Queue:** Wire `setTimeout`, `clearTimeout`, `queueMicrotask`, and `console.*` globals in Rust so `provideZonelessChangeDetection()` runs natively.

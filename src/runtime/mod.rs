@@ -1,5 +1,8 @@
-use crate::engine::{EngineError, NodeId, RenderEngine, StyleRule};
+pub mod parser;
+
+use crate::engine::{EngineError, NodeId, RenderEngine};
 use crate::platforms::PlatformBackend;
+pub use parser::{Instruction, parse_instruction, parse_script};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
@@ -44,13 +47,10 @@ impl JsRuntime {
         engine: &mut RenderEngine<B>,
         script: &str,
     ) -> Result<(), EngineError> {
+        let instructions = parse_script(script)?;
         let mut newly_created = HashSet::new();
-        for raw_line in script.lines() {
-            let line = raw_line.trim();
-            if line.is_empty() || line.starts_with("//") {
-                continue;
-            }
-            self.execute_statement(engine, line, false, &mut newly_created)?;
+        for inst in instructions {
+            self.execute_instruction(engine, inst, false, &mut newly_created)?;
         }
 
         engine.flush_frame();
@@ -64,17 +64,14 @@ impl JsRuntime {
         engine: &mut RenderEngine<B>,
         script: &str,
     ) -> Result<(), EngineError> {
+        let instructions = parse_script(script)?;
         self.bindings.clear();
         self.handlers.clear();
         engine.clear_listeners();
 
         let mut newly_created = HashSet::new();
-        for raw_line in script.lines() {
-            let line = raw_line.trim();
-            if line.is_empty() || line.starts_with("//") {
-                continue;
-            }
-            self.execute_statement(engine, line, true, &mut newly_created)?;
+        for inst in instructions {
+            self.execute_instruction(engine, inst, true, &mut newly_created)?;
         }
 
         let active_signals: Vec<(String, i64)> =
@@ -165,136 +162,172 @@ impl JsRuntime {
         Ok(())
     }
 
-    fn parse_i64(line: &str, raw: &str) -> Result<i64, EngineError> {
-        raw.parse::<i64>()
-            .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))
-    }
-
-    fn execute_statement<B: PlatformBackend>(
+    fn execute_instruction<B: PlatformBackend>(
         &mut self,
         engine: &mut RenderEngine<B>,
-        line: &str,
+        instruction: Instruction,
         is_hmr: bool,
         newly_created: &mut HashSet<String>,
     ) -> Result<(), EngineError> {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        match parts.as_slice() {
-            ["style", class_name, bg, fg, padding_str, spacing_str] => {
-                let rule =
-                    Self::parse_style_rule(line, class_name, bg, fg, padding_str, spacing_str)?;
+        match instruction {
+            Instruction::RegisterStyle(rule) => {
                 engine.register_style(rule);
                 Ok(())
             }
-            ["signal", signal_name, initial_str] => {
-                let initial = Self::parse_i64(line, initial_str)?;
+            Instruction::DeclareSignal { name, initial } => {
                 if is_hmr {
-                    self.signals
-                        .entry((*signal_name).to_string())
-                        .or_insert(initial);
+                    self.signals.entry(name).or_insert(initial);
                 } else {
-                    self.signals.insert((*signal_name).to_string(), initial);
+                    self.signals.insert(name, initial);
                 }
                 Ok(())
             }
-            ["bind_text", var_name, signal_name, rest @ ..] => {
-                let _ = self.resolve_var(var_name)?;
+            Instruction::BindText {
+                var_name,
+                signal_name,
+                template,
+            } => {
+                let _ = self.resolve_var(&var_name)?;
                 self.bindings.push(TextBinding {
-                    node_var: (*var_name).to_string(),
-                    signal_name: (*signal_name).to_string(),
-                    template: rest.join(" "),
+                    node_var: var_name,
+                    signal_name,
+                    template,
                 });
                 Ok(())
             }
-            ["on_add", var_name, event_name, signal_name, delta_str] => {
-                let delta = Self::parse_i64(line, delta_str)?;
-                self.attach_handler(
-                    engine,
-                    var_name,
-                    event_name,
-                    HandlerAction::AddSignal {
-                        signal_name: (*signal_name).to_string(),
-                        delta,
-                    },
-                )
-            }
-            ["on_set", var_name, event_name, signal_name, value_str] => {
-                let value = Self::parse_i64(line, value_str)?;
-                self.attach_handler(
-                    engine,
-                    var_name,
-                    event_name,
-                    HandlerAction::SetSignal {
-                        signal_name: (*signal_name).to_string(),
-                        value,
-                    },
-                )
-            }
-            ["on_text", var_name, event_name, target_var, rest @ ..] => self.attach_handler(
-                engine,
+            Instruction::OnAdd {
                 var_name,
                 event_name,
+                signal_name,
+                delta,
+            } => self.attach_handler(
+                engine,
+                &var_name,
+                &event_name,
+                HandlerAction::AddSignal { signal_name, delta },
+            ),
+            Instruction::OnSet {
+                var_name,
+                event_name,
+                signal_name,
+                value,
+            } => self.attach_handler(
+                engine,
+                &var_name,
+                &event_name,
+                HandlerAction::SetSignal { signal_name, value },
+            ),
+            Instruction::OnText {
+                var_name,
+                event_name,
+                target_var,
+                text,
+            } => self.attach_handler(
+                engine,
+                &var_name,
+                &event_name,
                 HandlerAction::SetText {
-                    node_var: (*target_var).to_string(),
-                    text: rest.join(" "),
+                    node_var: target_var,
+                    text,
                 },
             ),
-            ["create", var_name, tag] => {
-                if !is_hmr || !self.variables.contains_key(*var_name) {
-                    let id = engine.create_element(tag)?;
-                    self.variables.insert((*var_name).to_string(), id);
-                    newly_created.insert((*var_name).to_string());
+            other => self.execute_scene_instruction(engine, other, is_hmr, newly_created),
+        }
+    }
+
+    fn execute_scene_instruction<B: PlatformBackend>(
+        &mut self,
+        engine: &mut RenderEngine<B>,
+        instruction: Instruction,
+        is_hmr: bool,
+        newly_created: &mut HashSet<String>,
+    ) -> Result<(), EngineError> {
+        match instruction {
+            Instruction::CreateElement { var_name, tag } => {
+                if !is_hmr || !self.variables.contains_key(&var_name) {
+                    let id = engine.create_element(&tag)?;
+                    self.variables.insert(var_name.clone(), id);
+                    newly_created.insert(var_name);
                 }
                 Ok(())
             }
-            ["text", var_name, rest @ ..] => {
-                let id = self.resolve_var(var_name)?;
-                engine.set_text(id, rest.join(" "))
+            Instruction::CreateComment { var_name, text } => {
+                if !is_hmr || !self.variables.contains_key(&var_name) {
+                    let id = engine.create_comment(text);
+                    self.variables.insert(var_name.clone(), id);
+                    newly_created.insert(var_name);
+                }
+                Ok(())
             }
-            ["icon", var_name, app_id, ico_path] => {
-                let id = self.resolve_var(var_name)?;
-                engine.set_window_icon(id, *app_id, ico_path)
+            Instruction::SetText { var_name, text } => {
+                let id = self.resolve_var(&var_name)?;
+                engine.set_text(id, text)
             }
-            ["append", parent_var, child_var] => {
-                if !is_hmr || newly_created.contains(*child_var) {
-                    let parent = self.resolve_var(parent_var)?;
-                    let child = self.resolve_var(child_var)?;
+            Instruction::SetAttribute {
+                var_name,
+                key,
+                value,
+            } => {
+                let id = self.resolve_var(&var_name)?;
+                engine.set_attribute(id, key, value)
+            }
+            Instruction::SetIcon {
+                var_name,
+                app_id,
+                ico_path,
+            } => {
+                let id = self.resolve_var(&var_name)?;
+                engine.set_window_icon(id, app_id, &ico_path)
+            }
+            Instruction::AppendChild {
+                parent_var,
+                child_var,
+            } => {
+                if !is_hmr || newly_created.contains(&child_var) {
+                    let parent = self.resolve_var(&parent_var)?;
+                    let child = self.resolve_var(&child_var)?;
                     engine.append_child(parent, child)?;
                 }
                 Ok(())
             }
-            ["add_class", var_name, class_name] => {
-                let id = self.resolve_var(var_name)?;
-                engine.add_class(id, class_name)
+            Instruction::InsertBefore {
+                parent_var,
+                child_var,
+                ref_var,
+            } => {
+                if !is_hmr || newly_created.contains(&child_var) {
+                    let parent = self.resolve_var(&parent_var)?;
+                    let child = self.resolve_var(&child_var)?;
+                    let ref_child = match ref_var {
+                        Some(r) => Some(self.resolve_var(&r)?),
+                        None => None,
+                    };
+                    engine.insert_before(parent, child, ref_child)?;
+                }
+                Ok(())
             }
-            ["destroy", var_name] => {
-                let id = self.resolve_var(var_name)?;
+            Instruction::RemoveChild {
+                parent_var,
+                child_var,
+            } => {
+                let parent = self.resolve_var(&parent_var)?;
+                let child = self.resolve_var(&child_var)?;
+                engine.remove_child(parent, child)
+            }
+            Instruction::AddClass {
+                var_name,
+                class_name,
+            } => {
+                let id = self.resolve_var(&var_name)?;
+                engine.add_class(id, &class_name)
+            }
+            Instruction::Destroy { var_name } => {
+                let id = self.resolve_var(&var_name)?;
+                self.variables.remove(&var_name);
                 engine.destroy_node(id)
             }
-            _ => Err(EngineError::ScriptSyntaxError(line.to_string())),
+            _ => Ok(()),
         }
-    }
-
-    fn parse_style_rule(
-        line: &str,
-        class_name: &str,
-        bg: &str,
-        fg: &str,
-        padding_str: &str,
-        spacing_str: &str,
-    ) -> Result<StyleRule, EngineError> {
-        let padding = padding_str
-            .parse::<u16>()
-            .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))?;
-        let spacing = spacing_str
-            .parse::<u16>()
-            .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))?;
-        Ok(StyleRule {
-            class_name: class_name.to_string(),
-            background: (bg != "none").then(|| bg.to_string()),
-            foreground: (fg != "none").then(|| fg.to_string()),
-            padding,
-            spacing,
-        })
     }
 
     fn attach_handler<B: PlatformBackend>(
