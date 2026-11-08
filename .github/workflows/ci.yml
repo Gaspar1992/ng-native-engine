@@ -13,20 +13,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup Node.js (for Angular test bundle)
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install Angular & Tooling dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting (Oxfmt)
+        run: pnpm run format:check
+
+      - name: Lint Angular & TypeScript (Oxlint + Angular ESLint)
+        run: pnpm run lint
+
+      - name: Build Angular & Native Bundle (.ngb)
+        run: pnpm run build
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
 
-      - name: Compile Angular example bundle
-        run: node examples/counter-app/build-bundle.mjs
-
-      - name: Check formatting
+      - name: Check Rust formatting
         run: cargo fmt --all -- --check
 
       - name: Run Clippy linter

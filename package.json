@@ -1,0 +1,49 @@
+{
+  "name": "ng-linux-counter",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build && node examples/counter-app/build-bundle.mjs",
+    "build:native": "node examples/counter-app/build-bundle.mjs",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "lint": "oxlint . && eslint .",
+    "lint:ox": "oxlint .",
+    "lint:eslint": "eslint .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
+  },
+  "private": true,
+  "packageManager": "pnpm@12.9.1",
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular-eslint/eslint-plugin": "^22.6.0",
+    "@angular-eslint/eslint-plugin-template": "^22.6.0",
+    "@angular-eslint/template-parser": "^22.6.0",
+    "@angular/build": "^21.2.29",
+    "@angular/cli": "^21.2.29",
+    "@angular/compiler-cli": "^21.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
+    "angular-eslint": "^22.6.0",
+    "eslint": "^10.14.0",
+    "eslint-plugin-oxlint": "^1.90.0",
+    "jsdom": "^28.0.0",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.8"
+  }
+}

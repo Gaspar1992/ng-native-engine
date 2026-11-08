@@ -1,7 +1,9 @@
 {
   "recommendations": [
+    "angular.ng-template",
+    "oxc.oxc-vscode",
+    "dbaeumer.vscode-eslint",
     "rust-lang.rust-analyzer",
-    "tamasfe.even-better-toml",
-    "vadimcn.vscode-lldb"
+    "vitest.explorer"
   ]
 }

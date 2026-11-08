@@ -1,22 +1,73 @@
 {
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.trimAutoWhitespace": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always",
+    "source.fixAll.eslint": "always",
+    "source.fixAll.oxlint": "always",
+    "source.fixAll.oxc": "always",
+    "source.organizeImports": "always"
+  },
+  "eslint.validate": ["javascript", "typescript", "html"],
+  "eslint.format.enable": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[html]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[css]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+    "editor.formatOnSave": true
+  },
   "[rust]": {
     "editor.defaultFormatter": "rust-lang.rust-analyzer",
-    "editor.formatOnSave": true,
-    "editor.formatOnPaste": true,
-    "editor.rulers": [100],
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true,
-    "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true
+    "editor.formatOnSave": true
   },
-  "rust-analyzer.checkOnSave": true,
-  "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.check.allTargets": true,
-  "rust-analyzer.check.extraArgs": ["--", "-D", "warnings"],
-  "rust-analyzer.rustfmt.rangeFormatting.enable": true,
-  "rust-analyzer.Assist.importGranularity": "module",
-  "rust-analyzer.Assist.importPrefix": "by_self",
-  "rust-analyzer.inlayHints.chainingHints.enable": true,
-  "rust-analyzer.inlayHints.parameterHints.enable": true,
-  "rust-analyzer.inlayHints.typeHints.enable": true
+  "files.exclude": {
+    "**/.git": true,
+    "**/.angular": true,
+    "**/out-tsc": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.angular/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/target/**": true,
+    "**/out-tsc/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/target": true,
+    "**/.angular": true,
+    "**/out-tsc": true,
+    "**/pnpm-lock.yaml": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.includePackageJsonAutoImports": "auto"
 }
