@@ -129,6 +129,18 @@ impl GtkLinuxBackend {
                     GtkWidgetType::Box => {}
                 }
             }
+            RenderCommand::SetWindowIcon { node, icon } => {
+                let (Some(gtk), Some(widget)) = (&self.gtk, self.widgets.get(node)) else {
+                    return;
+                };
+                if widget.kind == GtkWidgetType::Window {
+                    gtk.configure_window_icon(
+                        widget.handle,
+                        &icon.app_id,
+                        "dist/ng-linux-counter/icons",
+                    );
+                }
+            }
             RenderCommand::ApplyStyleClass { node, style_id } => {
                 let (Some(gtk), Some(widget), Some(rule)) =
                     (&self.gtk, self.widgets.get(node), self.styles.get(style_id))

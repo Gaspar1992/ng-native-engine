@@ -23,8 +23,11 @@ pub type GtkClickCallback = unsafe extern "C" fn(*mut c_void, *mut c_void);
 /// Isolates all C FFI calls (`unsafe`) behind a safe Rust API (Single Responsibility Principle).
 pub struct Gtk4Sys {
     gtk_css_provider_load_from_string: unsafe extern "C" fn(*mut c_void, *const c_char),
+    gtk_icon_theme_add_search_path: unsafe extern "C" fn(*mut c_void, *const c_char),
     gtk_window_new: unsafe extern "C" fn() -> *mut c_void,
     gtk_window_set_title: unsafe extern "C" fn(*mut c_void, *const c_char),
+    gtk_window_set_icon_name: unsafe extern "C" fn(*mut c_void, *const c_char),
+    gtk_window_set_default_icon_name: unsafe extern "C" fn(*const c_char),
     gtk_window_set_default_size: unsafe extern "C" fn(*mut c_void, c_int, c_int),
     gtk_window_set_child: unsafe extern "C" fn(*mut c_void, *mut c_void),
     gtk_window_present: unsafe extern "C" fn(*mut c_void),
@@ -42,6 +45,8 @@ pub struct Gtk4Sys {
     gtk_widget_set_margin_start: unsafe extern "C" fn(*mut c_void, c_int),
     gtk_widget_set_margin_end: unsafe extern "C" fn(*mut c_void, c_int),
     g_main_context_iteration: unsafe extern "C" fn(*mut c_void, c_int) -> c_int,
+    g_set_prgname: unsafe extern "C" fn(*const c_char),
+    g_set_application_name: unsafe extern "C" fn(*const c_char),
     g_signal_connect_data: unsafe extern "C" fn(
         *mut c_void,
         *const c_char,
@@ -52,6 +57,7 @@ pub struct Gtk4Sys {
     ) -> c_ulong,
     g_list_model_get_n_items: unsafe extern "C" fn(*mut c_void) -> c_uint,
     css_provider: *mut c_void,
+    icon_theme: *mut c_void,
 }
 
 impl Gtk4Sys {
@@ -63,21 +69,34 @@ impl Gtk4Sys {
             let gio_lib = Self::open_lib(c"libgio-2.0.so.0")?;
             let glib_lib = Self::open_lib(c"libglib-2.0.so.0")?;
 
+            let g_set_prgname: unsafe extern "C" fn(*const c_char) =
+                Self::load_fn(glib_lib, c"g_set_prgname")?;
+            g_set_prgname(c"ng-linux-counter".as_ptr());
+
             let gtk_init_check: unsafe extern "C" fn() -> c_int =
                 Self::load_fn(gtk_lib, c"gtk_init_check")?;
             if gtk_init_check() == 0 {
                 return None;
             }
 
-            let css_provider = Self::init_css_provider(gtk_lib)?;
+            let (css_provider, icon_theme) = Self::init_display_resources(gtk_lib)?;
 
             Some(Self {
                 gtk_css_provider_load_from_string: Self::load_fn(
                     gtk_lib,
                     c"gtk_css_provider_load_from_string",
                 )?,
+                gtk_icon_theme_add_search_path: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_icon_theme_add_search_path",
+                )?,
                 gtk_window_new: Self::load_fn(gtk_lib, c"gtk_window_new")?,
                 gtk_window_set_title: Self::load_fn(gtk_lib, c"gtk_window_set_title")?,
+                gtk_window_set_icon_name: Self::load_fn(gtk_lib, c"gtk_window_set_icon_name")?,
+                gtk_window_set_default_icon_name: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_window_set_default_icon_name",
+                )?,
                 gtk_window_set_default_size: Self::load_fn(
                     gtk_lib,
                     c"gtk_window_set_default_size",
@@ -104,9 +123,12 @@ impl Gtk4Sys {
                 )?,
                 gtk_widget_set_margin_end: Self::load_fn(gtk_lib, c"gtk_widget_set_margin_end")?,
                 g_main_context_iteration: Self::load_fn(glib_lib, c"g_main_context_iteration")?,
+                g_set_prgname,
+                g_set_application_name: Self::load_fn(glib_lib, c"g_set_application_name")?,
                 g_signal_connect_data: Self::load_fn(gobject_lib, c"g_signal_connect_data")?,
                 g_list_model_get_n_items: Self::load_fn(gio_lib, c"g_list_model_get_n_items")?,
                 css_provider,
+                icon_theme,
             })
         }
     }
@@ -117,7 +139,7 @@ impl Gtk4Sys {
     }
 
     #[cfg(target_os = "linux")]
-    unsafe fn init_css_provider(gtk_lib: *mut c_void) -> Option<*mut c_void> {
+    unsafe fn init_display_resources(gtk_lib: *mut c_void) -> Option<(*mut c_void, *mut c_void)> {
         unsafe {
             let gdk_display_get_default: unsafe extern "C" fn() -> *mut c_void =
                 Self::load_fn(gtk_lib, c"gdk_display_get_default")?;
@@ -128,17 +150,24 @@ impl Gtk4Sys {
                 *mut c_void,
                 c_uint,
             ) = Self::load_fn(gtk_lib, c"gtk_style_context_add_provider_for_display")?;
+            let gtk_icon_theme_get_for_display: unsafe extern "C" fn(*mut c_void) -> *mut c_void =
+                Self::load_fn(gtk_lib, c"gtk_icon_theme_get_for_display")?;
 
             let display = gdk_display_get_default();
             let css_provider = gtk_css_provider_new();
-            if !display.is_null() && !css_provider.is_null() {
-                gtk_style_context_add_provider_for_display(
-                    display,
-                    css_provider,
-                    GTK_STYLE_PROVIDER_PRIORITY_APPLICATION,
-                );
-            }
-            Some(css_provider)
+            let icon_theme = if display.is_null() {
+                std::ptr::null_mut()
+            } else {
+                if !css_provider.is_null() {
+                    gtk_style_context_add_provider_for_display(
+                        display,
+                        css_provider,
+                        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION,
+                    );
+                }
+                gtk_icon_theme_get_for_display(display)
+            };
+            Some((css_provider, icon_theme))
         }
     }
 
@@ -165,6 +194,24 @@ impl Gtk4Sys {
         if let Ok(c_css) = CString::new(css) {
             unsafe {
                 (self.gtk_css_provider_load_from_string)(self.css_provider, c_css.as_ptr());
+            }
+        }
+    }
+
+    pub fn configure_window_icon(&self, win: GtkHandle, app_id: &str, search_dir: &str) {
+        if let Ok(c_dir) = CString::new(search_dir)
+            && !self.icon_theme.is_null()
+        {
+            unsafe {
+                (self.gtk_icon_theme_add_search_path)(self.icon_theme, c_dir.as_ptr());
+            }
+        }
+        if let Ok(c_app) = CString::new(app_id) {
+            unsafe {
+                (self.g_set_prgname)(c_app.as_ptr());
+                (self.g_set_application_name)(c_app.as_ptr());
+                (self.gtk_window_set_default_icon_name)(c_app.as_ptr());
+                (self.gtk_window_set_icon_name)(win.0, c_app.as_ptr());
             }
         }
     }

@@ -1,9 +1,11 @@
+use super::icons::WindowIconAsset;
 use super::node::{EngineError, NodeId};
 
 #[derive(Debug)]
 pub enum WidgetKind {
     Window {
         title: String,
+        icon: Option<WindowIconAsset>,
         child: Option<NodeId>,
     },
     Box {
@@ -24,6 +26,7 @@ impl WidgetKind {
         match tag {
             "ng-window" | "adw-window" => Ok(Self::Window {
                 title: String::from("Untitled"),
+                icon: None,
                 child: None,
             }),
             "ng-box" | "gtk-box" => Ok(Self::Box {
@@ -49,6 +52,18 @@ impl WidgetKind {
             Self::Box { .. } => return Err(EngineError::InvalidParent(id)),
         }
         Ok(())
+    }
+
+    pub fn set_icon(&mut self, id: NodeId, icon_asset: WindowIconAsset) -> Result<(), EngineError> {
+        match self {
+            Self::Window { icon, .. } => {
+                *icon = Some(icon_asset);
+                Ok(())
+            }
+            Self::Box { .. } | Self::Button { .. } | Self::Label { .. } => {
+                Err(EngineError::InvalidParent(id))
+            }
+        }
     }
 
     pub fn add_child(&mut self, parent_id: NodeId, child_id: NodeId) -> Result<(), EngineError> {

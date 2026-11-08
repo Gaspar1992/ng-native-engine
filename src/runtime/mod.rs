@@ -208,6 +208,10 @@ impl JsRuntime {
                 let id = self.resolve_var(var_name)?;
                 engine.set_text(id, rest.join(" "))
             }
+            ["icon", var_name, app_id, ico_path] => {
+                let id = self.resolve_var(var_name)?;
+                engine.set_window_icon(id, *app_id, ico_path)
+            }
             ["append", parent_var, child_var] => {
                 let parent = self.resolve_var(parent_var)?;
                 let child = self.resolve_var(child_var)?;

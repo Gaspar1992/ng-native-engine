@@ -1,6 +1,7 @@
 pub mod arena;
 pub mod commands;
 pub mod events;
+pub mod icons;
 pub mod node;
 pub mod styles;
 pub mod widget;
@@ -9,6 +10,7 @@ use crate::platforms::PlatformBackend;
 use arena::Arena;
 pub use commands::{CommandQueue, RenderCommand};
 use events::EventRegistry;
+pub use icons::{IconResolution, WindowIconAsset};
 pub use node::{EngineError, NodeId, StyleId};
 use std::fmt::Write;
 pub use styles::{StyleRegistry, StyleRule};
@@ -59,6 +61,20 @@ impl<B: PlatformBackend> RenderEngine<B> {
             .with_exclusive_mut(id, |w| w.set_text(id, text_str.clone()))?;
         self.commands
             .push(RenderCommand::SetText { id, text: text_str });
+        Ok(())
+    }
+
+    pub fn set_window_icon(
+        &mut self,
+        node: NodeId,
+        app_id: impl Into<String>,
+        ico_path: &str,
+    ) -> Result<(), EngineError> {
+        let icon = WindowIconAsset::from_ico_file(app_id, ico_path)?;
+        self.arena
+            .with_exclusive_mut(node, |w| w.set_icon(node, icon.clone()))?;
+        self.commands
+            .push(RenderCommand::SetWindowIcon { node, icon });
         Ok(())
     }
 
@@ -143,9 +159,12 @@ impl<B: PlatformBackend> RenderEngine<B> {
 
         let widget = self.arena.get(id)?;
         match widget {
-            WidgetKind::Window { title, child } => {
+            WidgetKind::Window { title, icon, child } => {
+                let icon_str = icon.as_ref().map_or_else(String::new, |ic| {
+                    format!(" icon=\"{}\" [{}]", ic.source_path, ic.format_resolutions())
+                });
                 println!(
-                    "{pad}[Window #{}:{} title=\"{title}\"{class_str}]",
+                    "{pad}[Window #{}:{} title=\"{title}\"{icon_str}{class_str}]",
                     id.index, id.generation
                 );
                 if let Some(child_id) = child {
@@ -186,8 +205,8 @@ impl<B: PlatformBackend> RenderEngine<B> {
 
     pub fn render_window_preview(&self, root_id: NodeId) -> Result<String, EngineError> {
         let root = self.arena.get(root_id)?;
-        let (title, child_opt) = match root {
-            WidgetKind::Window { title, child } => (title.as_str(), *child),
+        let (title, icon_opt, child_opt) = match root {
+            WidgetKind::Window { title, icon, child } => (title.as_str(), icon.as_ref(), *child),
             _ => return Err(EngineError::InvalidParent(root_id)),
         };
 
@@ -195,7 +214,11 @@ impl<B: PlatformBackend> RenderEngine<B> {
         let border = "═".repeat(width);
         let mut out = String::new();
         let _ = writeln!(out, "╔{border}╗");
-        let header = format!(" ● ● ●  {title} ({})", self.backend.backend_name());
+        let icon_badge = icon_opt.map_or_else(
+            || String::from("● ● ●"),
+            |ic| format!("[ICO:{}]", ic.format_resolutions()),
+        );
+        let header = format!(" {icon_badge}  {title} ({})", self.backend.backend_name());
         let _ = writeln!(out, "║{header:<width$}║");
         let _ = writeln!(out, "╠{border}╣");
 

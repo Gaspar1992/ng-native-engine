@@ -1,3 +1,4 @@
+use super::icons::WindowIconAsset;
 use super::node::{NodeId, StyleId};
 use super::styles::StyleRule;
 
@@ -7,6 +8,7 @@ use super::styles::StyleRule;
 pub enum RenderCommand {
     CreateWidget { id: NodeId, tag: String },
     SetText { id: NodeId, text: String },
+    SetWindowIcon { node: NodeId, icon: WindowIconAsset },
     AppendChild { parent: NodeId, child: NodeId },
     RegisterStyle { style_id: StyleId, rule: StyleRule },
     ApplyStyleClass { node: NodeId, style_id: StyleId },

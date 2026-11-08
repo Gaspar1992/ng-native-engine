@@ -16,10 +16,10 @@ fn full_mvp_pipeline_with_headless_backend() {
     let mut engine = RenderEngine::new(HeadlessBackend::new());
     let mut runtime = JsRuntime::new();
 
-    // Tick 1: Mount Angular component (signals + styles + template + declarative events)
+    // Tick 1: Mount Angular component (signals + styles + template + icon + declarative events)
     runtime.eval_tick(&mut engine, &script).unwrap();
     assert_eq!(engine.backend().frames.len(), 1);
-    assert_eq!(engine.backend().frames[0].len(), 19);
+    assert_eq!(engine.backend().frames[0].len(), 20);
 
     let win = runtime.resolve_var("win").unwrap();
     let hello = runtime.resolve_var("hello").unwrap();
@@ -28,6 +28,7 @@ fn full_mvp_pipeline_with_headless_backend() {
 
     let preview = engine.render_window_preview(win).unwrap();
     assert!(preview.contains("NgNative - Hola Mundo"));
+    assert!(preview.contains("[ICO:16x16, 32x32, 48x48]"));
     assert!(preview.contains("Hola Mundo desde Angular Native!"));
     assert!(preview.contains(".hero-title"));
 
