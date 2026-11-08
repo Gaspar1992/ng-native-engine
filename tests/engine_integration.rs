@@ -7,6 +7,23 @@ use ng_native_engine::platforms::{
 };
 use ng_native_engine::runtime::JsRuntime;
 use std::fs;
+use std::process::Command;
+
+fn load_or_build_test_bundle(output_path: &str) -> String {
+    let bundle_path = format!("{output_path}/main.ngb");
+    if let Ok(content) = fs::read_to_string(&bundle_path)
+        && !content.trim().is_empty()
+    {
+        return content;
+    }
+
+    let _ = Command::new("node")
+        .arg("examples/counter-app/build-bundle.mjs")
+        .status();
+
+    fs::read_to_string(&bundle_path)
+        .unwrap_or_else(|_| panic!("Failed to load or auto-compile test bundle at '{bundle_path}'"))
+}
 
 #[test]
 fn full_mvp_pipeline_with_headless_backend() {
@@ -14,8 +31,7 @@ fn full_mvp_pipeline_with_headless_backend() {
     assert_eq!(cfg.project_name, "ng-linux-counter");
     assert_eq!(cfg.target_platform, "linux-gtk4");
 
-    let bundle_path = format!("{}/main.ngb", cfg.output_path);
-    let script = fs::read_to_string(bundle_path).unwrap();
+    let script = load_or_build_test_bundle(&cfg.output_path);
 
     let mut engine = RenderEngine::new(HeadlessBackend::new());
     let mut runtime = JsRuntime::new();
@@ -133,8 +149,7 @@ fn cross_platform_factory_supports_linux_windows_and_macos() {
 #[test]
 fn hot_reload_preserves_signal_state_and_updates_template_and_styles() {
     let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
-    let bundle_path = format!("{}/main.ngb", cfg.output_path);
-    let initial_script = fs::read_to_string(bundle_path).unwrap();
+    let initial_script = load_or_build_test_bundle(&cfg.output_path);
 
     let mut engine = RenderEngine::new(HeadlessBackend::new());
     let mut runtime = JsRuntime::new();
