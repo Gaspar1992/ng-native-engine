@@ -3,10 +3,11 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractComponentMetadata } from './ast-metadata-extractor.mjs';
 import { buildMultiResolutionIcons } from './icon-compiler.mjs';
+import { pushHmrReload } from './hmr-client.mjs';
 import { emitStyleInstruction, parseStylesCss } from './style-compiler.mjs';
 import { parseTemplateHtml } from './template-compiler.mjs';
 
-export { extractComponentMetadata, parseStylesCss, parseTemplateHtml };
+export { extractComponentMetadata, parseStylesCss, parseTemplateHtml, pushHmrReload };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, '../..');
@@ -144,7 +145,22 @@ export function compileBundle({ rebuildIcons = true } = {}) {
   const bundleFile = resolve(outDir, 'main.ngb');
   writeFileSync(bundleFile, bundle, 'utf8');
   console.log(`[Angular Native Compiler] Compiled ${projectName} -> ${bundleFile}`);
-  return { projectName, sourceRoot: resolve(rootDir, projectCfg.sourceRoot), bundleFile };
+
+  const socketPath = resolve(outDir, 'hmr.sock');
+  if (existsSync(socketPath)) {
+    pushHmrReload(socketPath, bundle).then((res) => {
+      if (res.connected && res.response?.status === 'ok') {
+        console.log(`[Angular Native HMR] Pushed live bundle update over IPC -> ${socketPath}`);
+      }
+    });
+  }
+
+  return {
+    projectName,
+    sourceRoot: resolve(rootDir, projectCfg.sourceRoot),
+    bundleFile,
+    socketPath,
+  };
 }
 
 export function watchBundle() {

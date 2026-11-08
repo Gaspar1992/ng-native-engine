@@ -1,5 +1,6 @@
 use ng_native_engine::config::AngularNativeConfig;
 use ng_native_engine::engine::RenderEngine;
+use ng_native_engine::ipc::{HmrIpcServer, HmrMessage, HmrResponse};
 use ng_native_engine::packager::stage_linux_distribution;
 use ng_native_engine::platforms::AnyPlatformBackend;
 use ng_native_engine::runtime::{JsEngineBackend, JsRuntime};
@@ -12,6 +13,37 @@ use std::time::{Duration, SystemTime};
 
 fn bundle_modified_time(path: &str) -> Option<SystemTime> {
     fs::metadata(path).and_then(|m| m.modified()).ok()
+}
+
+fn handle_hmr_messages(
+    server: &mut HmrIpcServer,
+    engine: &mut RenderEngine<AnyPlatformBackend>,
+    js_runtime: &mut JsRuntime,
+    win_id: ng_native_engine::engine::NodeId,
+) {
+    for (cid, msg) in server.poll_messages() {
+        match msg {
+            HmrMessage::Reload { script } => {
+                if let Err(err) = js_runtime.hot_reload(engine, &script) {
+                    eprintln!("[HMR IPC Error] Failed to reload bundle: {err:?}");
+                    server.send_response(cid, &HmrResponse::Error(format!("{err:?}")));
+                } else {
+                    println!("\n[HMR IPC] Applied live update (signals preserved):");
+                    println!("{}", engine.render_window_preview(win_id).unwrap());
+                    server.send_response(cid, &HmrResponse::Ok { reloaded: true });
+                }
+            }
+            HmrMessage::Eval { code } => match js_runtime.eval_js(engine, &code) {
+                Ok(res) => server.send_response(cid, &HmrResponse::EvalResult(res)),
+                Err(err) => {
+                    server.send_response(cid, &HmrResponse::Error(format!("{err:?}")));
+                }
+            },
+            HmrMessage::Ping => {
+                server.send_response(cid, &HmrResponse::Pong);
+            }
+        }
+    }
 }
 
 fn ensure_bundle_compiled(bundle_path: &str) -> String {
@@ -69,6 +101,12 @@ fn main() {
     println!("\n--- Rendered Window Preview ---");
     println!("{}", engine.render_window_preview(win_id).unwrap());
 
+    let hmr_socket = format!("{}/hmr.sock", cfg.output_path);
+    let mut hmr_server = HmrIpcServer::bind(&hmr_socket).ok();
+    if hmr_server.is_some() {
+        println!("[HMR IPC] Socket server active -> '{hmr_socket}'");
+    }
+
     if engine.backend().is_native_display_active() && env::var("NG_NATIVE_BATCH").is_err() {
         println!(
             "\n[GTK4 Native Window Active] Opened native Linux window '{}'. Watching '{}' for Hot Reload...",
@@ -85,6 +123,10 @@ fn main() {
                         &ev.payload,
                     )
                     .unwrap();
+            }
+
+            if let Some(ref mut server) = hmr_server {
+                handle_hmr_messages(server, &mut engine, &mut js_runtime, win_id);
             }
 
             let current_mtime = bundle_modified_time(&bundle_path);
