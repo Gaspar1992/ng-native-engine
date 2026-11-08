@@ -1,0 +1,7 @@
+<ng-window id="win" title="{{ windowTitle() }}">
+  <ng-box id="vbox" class="main-card">
+    <ng-label id="hello" class="hero-title">{{ greeting() }}</ng-label>
+    <ng-label id="lbl">Count: {{ count() }}</ng-label>
+    <ng-button id="btn" class="suggested-action" (click)="increment()">Increment</ng-button>
+  </ng-box>
+</ng-window>

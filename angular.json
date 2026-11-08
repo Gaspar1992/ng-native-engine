@@ -1,18 +1,77 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
-  "defaultProject": "ng-linux-counter",
+  "cli": {
+    "packageManager": "pnpm"
+  },
+  "newProjectRoot": "examples",
   "projects": {
     "ng-linux-counter": {
       "projectType": "application",
+      "schematics": {},
+      "root": "examples/counter-app",
+      "sourceRoot": "examples/counter-app/src",
+      "prefix": "app",
       "architect": {
         "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "examples/counter-app/src/main.ts",
+            "tsConfig": "tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "examples/counter-app/public"
+              }
+            ],
+            "styles": ["examples/counter-app/src/styles.css"]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "native": {
           "builder": "@ng-native/builders:engine",
           "options": {
             "targetPlatform": "linux-gtk4",
             "outputPath": "dist/ng-linux-counter",
-            "main": "src/main.ts"
+            "main": "examples/counter-app/src/main.ts"
           }
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "ng-linux-counter:build:production"
+            },
+            "development": {
+              "buildTarget": "ng-linux-counter:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
         }
       }
     }
