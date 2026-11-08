@@ -5,6 +5,17 @@ This project adheres to [Conventional Commits](https://www.conventionalcommits.o
 
 ## [Unreleased]
 
+### Features (Phase 7 — AST-Driven Toolchain, Real-Time Socket HMR, & SRP Hardening)
+
+- **ipc:** create `src/ipc/mod.rs` implementing non-blocking Unix Domain Socket `HmrIpcServer` & `HmrIpcClient` with framed JSON messages (`HmrMessage::Reload`, `HmrMessage::Eval`, `HmrMessage::Ping`) and automatic cleanup of stale socket files.
+- **hmr:** add `examples/counter-app/hmr-client.mjs` and wire live bundle push directly into `build-bundle.mjs` and `dev-server.mjs`, eliminating file-system polling race conditions during development.
+- **compiler:** implement `ast-metadata-extractor.mjs` using Rust-based `oxc-parser` (`parseSync`) for TypeScript 6.0 AST extraction, `template-compiler.mjs` using `@angular/compiler`'s official `parseTemplate` AST, and `style-compiler.mjs` using `postcss` AST (zero regex parsing).
+- **styles:** extend `StyleRule` and GTK4 CSS generator with `border-radius`, `font-size`, and `font-weight`, maintaining 100% backward compatibility with legacy 6-token style instructions.
+- **platforms:** extract DRY cross-platform state machine `src/platforms/scene_state.rs` (`NativeSceneState` + `NativeSceneNode`) shared by `WinUiBackend` and `MacOsAppKitBackend`.
+- **runtime:** refactor `src/runtime/mod.rs` into `js_bridge.rs` (JS eval & event routing), `reactivity.rs` (Signal propagation & text bindings), and `scene_exec.rs` (scene instruction execution).
+- **engine:** extract layout and interactive attribute mutators into `src/engine/widget_attrs.rs`.
+- **testing:** expand automated test suite to 54 passing tests (23 Rust unit tests + 10 Rust E2E tests + 21 Vitest tests).
+
 ### Features (Phase 6 — `@ng-native/builders`, Linux Distribution Packager, & Stateful Cross-Platform Backends)
 
 - **packager:** add `src/packager/mod.rs` (`stage_linux_distribution`, `generate_debian_control`, `generate_desktop_entry`, `generate_appimage_apprun`, `generate_flatpak_manifest`) and `--package` CLI flag (`pnpm run package:linux`).
