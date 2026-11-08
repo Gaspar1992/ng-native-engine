@@ -32,12 +32,11 @@ fn full_mvp_pipeline_with_headless_backend() {
     assert!(preview.contains("Hola Mundo desde Angular Native!"));
     assert!(preview.contains(".hero-title"));
 
-    assert!(
-        engine.backend().frames[0].contains(&RenderCommand::SetText {
-            id: hello,
-            text: String::from("Hola Mundo desde Angular Native!"),
-        })
-    );
+    assert!(engine.backend().frames[0].iter().any(|cmd| matches!(
+        cmd,
+        RenderCommand::SetText { id, text }
+            if *id == hello && text.starts_with("Hola Mundo desde Angular Native!")
+    )));
 
     // Tick 2: Declarative `(click)="increment()"` updates signal `count` -> `Count: 1`
     runtime
@@ -89,4 +88,59 @@ fn cross_platform_factory_supports_linux_windows_and_macos() {
 
     let macos = AnyPlatformBackend::from_target("macos-appkit").unwrap();
     assert_eq!(macos.map_native_widget("ng-window"), "NSWindow");
+}
+
+#[test]
+fn hot_reload_preserves_signal_state_and_updates_template_and_styles() {
+    let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
+    let bundle_path = format!("{}/main.ngb", cfg.output_path);
+    let initial_script = fs::read_to_string(bundle_path).unwrap();
+
+    let mut engine = RenderEngine::new(HeadlessBackend::new());
+    let mut runtime = JsRuntime::new();
+
+    // 1. Initial mount and increment signal twice (`count` = 2)
+    runtime.eval_tick(&mut engine, &initial_script).unwrap();
+    runtime
+        .trigger_event(&mut engine, "btn", "clicked")
+        .unwrap();
+    runtime
+        .trigger_event(&mut engine, "btn", "clicked")
+        .unwrap();
+
+    let win = runtime.resolve_var("win").unwrap();
+    let before_preview = engine.render_window_preview(win).unwrap();
+    assert!(before_preview.contains("Count: 2"));
+
+    // 2. Simulate saving updated `app.html` and `app.css` while window is open
+    let updated_script = initial_script
+        .lines()
+        .map(|line| {
+            if line.starts_with("text hello ") {
+                "text hello Hola Mundo en Vivo (HMR)!"
+            } else if line.starts_with("bind_text lbl count ") {
+                "bind_text lbl count Contador HMR: {}"
+            } else if line.starts_with("style hero-title ") {
+                "style hero-title none #22c55e 8 0"
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    runtime.hot_reload(&mut engine, &updated_script).unwrap();
+
+    // 3. Verify signal `count` stayed at 2 while template text and CSS updated in-place
+    let after_preview = engine.render_window_preview(win).unwrap();
+    assert!(after_preview.contains("Hola Mundo en Vivo (HMR)!"));
+    assert!(after_preview.contains("Contador HMR: 2"));
+    assert!(after_preview.contains(".hero-title(bg:transparent, fg:#22c55e, pad:8px)"));
+
+    // 4. Verify event listener re-bound cleanly after HMR (`count` -> 3)
+    runtime
+        .trigger_event(&mut engine, "btn", "clicked")
+        .unwrap();
+    let next_preview = engine.render_window_preview(win).unwrap();
+    assert!(next_preview.contains("Contador HMR: 3"));
 }

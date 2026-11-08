@@ -38,6 +38,10 @@ impl EventRegistry {
         self.listeners.retain(|l| l.node != node);
     }
 
+    pub fn clear(&mut self) {
+        self.listeners.clear();
+    }
+
     pub fn matching_listeners(&self, node: NodeId, event_name: &str) -> Vec<u64> {
         self.listeners
             .iter()

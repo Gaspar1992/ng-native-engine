@@ -4,6 +4,12 @@ use ng_native_engine::platforms::AnyPlatformBackend;
 use ng_native_engine::runtime::JsRuntime;
 use std::env;
 use std::fs;
+use std::thread;
+use std::time::{Duration, SystemTime};
+
+fn bundle_modified_time(path: &str) -> Option<SystemTime> {
+    fs::metadata(path).and_then(|m| m.modified()).ok()
+}
 
 fn main() {
     // 1. Read `angular.json` to configure the project & target platform
@@ -12,6 +18,7 @@ fn main() {
     let bootstrap_script = fs::read_to_string(&bundle_path).unwrap_or_else(|_| {
         panic!("Bundle not found at '{bundle_path}'. Run `pnpm run build` first.")
     });
+    let mut last_mtime = bundle_modified_time(&bundle_path);
 
     println!(
         "Loaded angular.json -> project='{}', platform='{}', bundle='{}'\n",
@@ -35,16 +42,35 @@ fn main() {
 
     if engine.backend().is_native_display_active() && env::var("NG_NATIVE_BATCH").is_err() {
         println!(
-            "\n[GTK4 Native Window Active] Opened native Linux window '{}'. Click 'Increment' or close the window to exit.",
-            cfg.project_name
+            "\n[GTK4 Native Window Active] Opened native Linux window '{}'. Watching '{}' for Hot Reload...",
+            cfg.project_name, bundle_path
         );
         while engine.backend().open_window_count() > 0 {
-            let clicked_nodes = engine.backend().step_event_loop(true);
+            let clicked_nodes = engine.backend().step_event_loop(false);
             for clicked_id in clicked_nodes {
                 js_runtime
                     .trigger_node_event(&mut engine, clicked_id, "clicked")
                     .unwrap();
             }
+
+            let current_mtime = bundle_modified_time(&bundle_path);
+            if current_mtime.is_some()
+                && current_mtime != last_mtime
+                && let Ok(updated_script) = fs::read_to_string(&bundle_path)
+                && !updated_script.trim().is_empty()
+            {
+                last_mtime = current_mtime;
+                if let Err(err) = js_runtime.hot_reload(&mut engine, &updated_script) {
+                    eprintln!("[Hot Reload Error] Failed to apply bundle update: {err:?}");
+                } else {
+                    println!(
+                        "\n[Hot Reload] Applied live update from '{bundle_path}' (signals preserved):"
+                    );
+                    println!("{}", engine.render_window_preview(win_id).unwrap());
+                }
+            }
+
+            thread::sleep(Duration::from_millis(16));
         }
     } else {
         // Pump non-blocking GTK4 events if available and run declarative click simulation

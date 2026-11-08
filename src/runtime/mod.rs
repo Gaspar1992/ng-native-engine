@@ -1,6 +1,6 @@
 use crate::engine::{EngineError, NodeId, RenderEngine, StyleRule};
 use crate::platforms::PlatformBackend;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 struct TextBinding {
@@ -17,7 +17,8 @@ enum HandlerAction {
 }
 
 /// Embedded JS Bridge Runtime that executes compiled Angular instructions (`.ngb`),
-/// maintains reactive Signal state, and dispatches native OS events back into Angular handlers.
+/// maintains reactive Signal state, supports state-preserving Hot Reload (HMR),
+/// and dispatches native OS events back into Angular handlers.
 #[derive(Default)]
 pub struct JsRuntime {
     variables: HashMap<String, NodeId>,
@@ -43,12 +44,43 @@ impl JsRuntime {
         engine: &mut RenderEngine<B>,
         script: &str,
     ) -> Result<(), EngineError> {
+        let mut newly_created = HashSet::new();
         for raw_line in script.lines() {
             let line = raw_line.trim();
             if line.is_empty() || line.starts_with("//") {
                 continue;
             }
-            self.execute_statement(engine, line)?;
+            self.execute_statement(engine, line, false, &mut newly_created)?;
+        }
+
+        engine.flush_frame();
+        Ok(())
+    }
+
+    /// Hot-reloads an updated `.ngb` bundle in-place against the live scene graph,
+    /// preserving active Signal values while updating styles, text, and new widgets.
+    pub fn hot_reload<B: PlatformBackend>(
+        &mut self,
+        engine: &mut RenderEngine<B>,
+        script: &str,
+    ) -> Result<(), EngineError> {
+        self.bindings.clear();
+        self.handlers.clear();
+        engine.clear_listeners();
+
+        let mut newly_created = HashSet::new();
+        for raw_line in script.lines() {
+            let line = raw_line.trim();
+            if line.is_empty() || line.starts_with("//") {
+                continue;
+            }
+            self.execute_statement(engine, line, true, &mut newly_created)?;
+        }
+
+        let active_signals: Vec<(String, i64)> =
+            self.signals.iter().map(|(k, v)| (k.clone(), *v)).collect();
+        for (sig_name, val) in active_signals {
+            self.propagate_signal(engine, &sig_name, val)?;
         }
 
         engine.flush_frame();
@@ -133,10 +165,17 @@ impl JsRuntime {
         Ok(())
     }
 
+    fn parse_i64(line: &str, raw: &str) -> Result<i64, EngineError> {
+        raw.parse::<i64>()
+            .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))
+    }
+
     fn execute_statement<B: PlatformBackend>(
         &mut self,
         engine: &mut RenderEngine<B>,
         line: &str,
+        is_hmr: bool,
+        newly_created: &mut HashSet<String>,
     ) -> Result<(), EngineError> {
         let parts: Vec<&str> = line.split_whitespace().collect();
         match parts.as_slice() {
@@ -147,10 +186,14 @@ impl JsRuntime {
                 Ok(())
             }
             ["signal", signal_name, initial_str] => {
-                let initial = initial_str
-                    .parse::<i64>()
-                    .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))?;
-                self.signals.insert((*signal_name).to_string(), initial);
+                let initial = Self::parse_i64(line, initial_str)?;
+                if is_hmr {
+                    self.signals
+                        .entry((*signal_name).to_string())
+                        .or_insert(initial);
+                } else {
+                    self.signals.insert((*signal_name).to_string(), initial);
+                }
                 Ok(())
             }
             ["bind_text", var_name, signal_name, rest @ ..] => {
@@ -163,9 +206,7 @@ impl JsRuntime {
                 Ok(())
             }
             ["on_add", var_name, event_name, signal_name, delta_str] => {
-                let delta = delta_str
-                    .parse::<i64>()
-                    .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))?;
+                let delta = Self::parse_i64(line, delta_str)?;
                 self.attach_handler(
                     engine,
                     var_name,
@@ -177,9 +218,7 @@ impl JsRuntime {
                 )
             }
             ["on_set", var_name, event_name, signal_name, value_str] => {
-                let value = value_str
-                    .parse::<i64>()
-                    .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))?;
+                let value = Self::parse_i64(line, value_str)?;
                 self.attach_handler(
                     engine,
                     var_name,
@@ -200,8 +239,11 @@ impl JsRuntime {
                 },
             ),
             ["create", var_name, tag] => {
-                let id = engine.create_element(tag)?;
-                self.variables.insert((*var_name).to_string(), id);
+                if !is_hmr || !self.variables.contains_key(*var_name) {
+                    let id = engine.create_element(tag)?;
+                    self.variables.insert((*var_name).to_string(), id);
+                    newly_created.insert((*var_name).to_string());
+                }
                 Ok(())
             }
             ["text", var_name, rest @ ..] => {
@@ -213,9 +255,12 @@ impl JsRuntime {
                 engine.set_window_icon(id, *app_id, ico_path)
             }
             ["append", parent_var, child_var] => {
-                let parent = self.resolve_var(parent_var)?;
-                let child = self.resolve_var(child_var)?;
-                engine.append_child(parent, child)
+                if !is_hmr || newly_created.contains(*child_var) {
+                    let parent = self.resolve_var(parent_var)?;
+                    let child = self.resolve_var(child_var)?;
+                    engine.append_child(parent, child)?;
+                }
+                Ok(())
             }
             ["add_class", var_name, class_name] => {
                 let id = self.resolve_var(var_name)?;

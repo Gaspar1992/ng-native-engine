@@ -110,6 +110,10 @@ impl<B: PlatformBackend> RenderEngine<B> {
         self.events.unregister(listener_id)
     }
 
+    pub fn clear_listeners(&mut self) {
+        self.events.clear();
+    }
+
     pub fn emit_event<F>(
         &mut self,
         source: NodeId,

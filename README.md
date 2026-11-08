@@ -53,7 +53,8 @@ ng-native-engine/
 │       └── mod.rs                # Embedded reactive Signal & bytecode (.ngb) runtime
 ├── examples/
 │   └── counter-app/              # Official Angular 21 application workspace
-│       ├── build-bundle.mjs      # Template, CSS, Signal & multi-DPI icon compiler
+│       ├── build-bundle.mjs      # Template, CSS, Signal & multi-DPI icon compiler (--watch capable)
+│       ├── dev-server.mjs        # Live Hot-Reload dev orchestrator (file watcher + native window)
 │       ├── public/favicon.ico    # Multi-resolution (16x16, 32x32, 48x48) Angular icon
 │       └── src/app/              # Angular 21 @Component (app.ts, app.html, app.css)
 ├── tests/
@@ -89,7 +90,15 @@ This runs the official Angular 21 compiler (`ng build`) followed by the native c
 - `dist/ng-linux-counter/main.ngb` (compiled native instructions, styles, and reactive signal bindings)
 - `dist/ng-linux-counter/icons/hicolor/<size>x<size>/apps/ng-linux-counter.png` (`16x16` through `256x256` taskbar icons)
 
-### 3. Launch the Native Linux GTK4 Window
+### 3. Live Development with State-Preserving Hot Reload (`pnpm run dev`)
+
+```bash
+pnpm run dev
+```
+
+Starts the file watcher on `examples/counter-app/src/` and opens the native Linux GTK4 window. Whenever you save `app.ts`, `app.html`, or `app.css`, `build-bundle.mjs` recompiles `main.ngb` and the Rust engine hot-reloads styles, text, and bindings **in-place without closing the window or losing current Angular Signal state** (`count`).
+
+### 4. Launch the Native Linux GTK4 Window Directly
 
 ```bash
 cargo run
@@ -107,6 +116,7 @@ NG_NATIVE_BATCH=1 cargo run
 
 | Command                                     | Description                                                         |
 | :------------------------------------------ | :------------------------------------------------------------------ |
+| `pnpm run dev`                              | Watch Angular files & hot-reload native GTK4 window in real time    |
 | `pnpm run format`                           | Format TypeScript, HTML, CSS, JSON, and Markdown via `oxfmt`        |
 | `pnpm run format:check`                     | Verify formatting with `oxfmt`                                      |
 | `pnpm run lint`                             | Lint TypeScript & Angular templates via `oxlint` + `angular-eslint` |

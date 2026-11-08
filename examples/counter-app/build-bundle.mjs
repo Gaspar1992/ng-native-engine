@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -385,45 +385,75 @@ function emitNgbBundle(styleRules, numericSignals, methods, astRoots, iconMeta, 
   return lines.join('\n') + '\n';
 }
 
-// Run compiler pipeline using `angular.json` configuration
-const angularConfig = JSON.parse(readFileSync(resolve(rootDir, 'angular.json'), 'utf8'));
-const projectName = angularConfig.defaultProject || Object.keys(angularConfig.projects)[0];
-const projectCfg = angularConfig.projects[projectName];
-const nativeOptions = projectCfg.architect.native?.options || projectCfg.architect.build.options;
+export function compileBundle({ rebuildIcons = true } = {}) {
+  const angularConfig = JSON.parse(readFileSync(resolve(rootDir, 'angular.json'), 'utf8'));
+  const projectName = angularConfig.defaultProject || Object.keys(angularConfig.projects)[0];
+  const projectCfg = angularConfig.projects[projectName];
+  const nativeOptions = projectCfg.architect.native?.options || projectCfg.architect.build.options;
 
-const appDir = resolve(rootDir, projectCfg.sourceRoot, 'app');
-const tsSource = readFileSync(resolve(appDir, 'app.ts'), 'utf8');
-const htmlSource = readFileSync(resolve(appDir, 'app.html'), 'utf8');
-const cssSource = readFileSync(resolve(appDir, 'app.css'), 'utf8');
-const indexHtml = readFileSync(resolve(rootDir, projectCfg.sourceRoot, 'index.html'), 'utf8');
+  const appDir = resolve(rootDir, projectCfg.sourceRoot, 'app');
+  const tsSource = readFileSync(resolve(appDir, 'app.ts'), 'utf8');
+  const htmlSource = readFileSync(resolve(appDir, 'app.html'), 'utf8');
+  const cssSource = readFileSync(resolve(appDir, 'app.css'), 'utf8');
+  const indexHtml = readFileSync(resolve(rootDir, projectCfg.sourceRoot, 'index.html'), 'utf8');
 
-const iconHrefMatch = indexHtml.match(/<link[^>]*rel="icon"[^>]*href="([^"]+)"/);
-const iconFileName = iconHrefMatch ? iconHrefMatch[1] : 'favicon.ico';
-const iconRelPath = `${projectCfg.root}/public/${iconFileName}`;
-const iconAbsPath = resolve(rootDir, iconRelPath);
+  const iconHrefMatch = indexHtml.match(/<link[^>]*rel="icon"[^>]*href="([^"]+)"/);
+  const iconFileName = iconHrefMatch ? iconHrefMatch[1] : 'favicon.ico';
+  const iconRelPath = `${projectCfg.root}/public/${iconFileName}`;
+  const iconAbsPath = resolve(rootDir, iconRelPath);
 
-const { state, numericSignals, methods } = extractComponentMetadata(tsSource);
-const styleRules = parseStylesCss(cssSource);
-const templateAst = parseTemplateHtml(htmlSource, state, numericSignals);
+  const { state, numericSignals, methods } = extractComponentMetadata(tsSource);
+  const styleRules = parseStylesCss(cssSource);
+  const templateAst = parseTemplateHtml(htmlSource, state, numericSignals);
 
-const outDir = resolve(rootDir, nativeOptions.outputPath);
-mkdirSync(outDir, { recursive: true });
+  const outDir = resolve(rootDir, nativeOptions.outputPath);
+  mkdirSync(outDir, { recursive: true });
 
-let iconMeta = null;
-if (existsSync(iconAbsPath)) {
-  iconMeta = { appId: projectName, relPath: iconRelPath };
-  buildMultiResolutionIcons(iconAbsPath, projectName, outDir, state.windowTitle);
+  let iconMeta = null;
+  if (existsSync(iconAbsPath)) {
+    iconMeta = { appId: projectName, relPath: iconRelPath };
+    if (rebuildIcons) {
+      buildMultiResolutionIcons(iconAbsPath, projectName, outDir, state.windowTitle);
+    }
+  }
+
+  const bundle = emitNgbBundle(
+    styleRules,
+    numericSignals,
+    methods,
+    templateAst,
+    iconMeta,
+    `${projectCfg.sourceRoot}/app/app.{ts,html,css}`,
+  );
+
+  const bundleFile = resolve(outDir, 'main.ngb');
+  writeFileSync(bundleFile, bundle, 'utf8');
+  console.log(`[Angular Native Compiler] Compiled ${projectName} -> ${bundleFile}`);
+  return { projectName, sourceRoot: resolve(rootDir, projectCfg.sourceRoot), bundleFile };
 }
 
-const bundle = emitNgbBundle(
-  styleRules,
-  numericSignals,
-  methods,
-  templateAst,
-  iconMeta,
-  `${projectCfg.sourceRoot}/app/app.{ts,html,css}`,
-);
+export function watchBundle() {
+  const { sourceRoot } = compileBundle({ rebuildIcons: true });
+  console.log(`[Angular Native Watcher] Watching '${sourceRoot}' for changes...`);
 
-const bundleFile = resolve(outDir, 'main.ngb');
-writeFileSync(bundleFile, bundle, 'utf8');
-console.log(`[Angular Native Compiler] Compiled ${projectName} -> ${bundleFile}`);
+  let debounceTimer = null;
+  return watch(sourceRoot, { recursive: true }, (_eventType, filename) => {
+    if (!filename || !/\.(ts|html|css)$/.test(filename)) return;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      try {
+        compileBundle({ rebuildIcons: filename.endsWith('index.html') });
+      } catch (err) {
+        console.error('[Angular Native Watcher] Compilation error:', err);
+      }
+    }, 60);
+  });
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  if (process.argv.includes('--watch')) {
+    watchBundle();
+  } else {
+    compileBundle({ rebuildIcons: true });
+  }
+}

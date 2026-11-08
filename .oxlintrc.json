@@ -15,7 +15,7 @@
   },
   "overrides": [
     {
-      "files": ["examples/*/build-bundle.mjs", "examples/*/src/main.ts"],
+      "files": ["examples/*/*.mjs", "examples/*/src/main.ts"],
       "rules": {
         "no-console": "off"
       }

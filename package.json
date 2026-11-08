@@ -4,10 +4,12 @@
   "type": "module",
   "scripts": {
     "ng": "ng",
+    "dev": "node examples/counter-app/dev-server.mjs",
     "start": "ng serve",
     "build": "ng build && node examples/counter-app/build-bundle.mjs",
     "build:native": "node examples/counter-app/build-bundle.mjs",
     "watch": "ng build --watch --configuration development",
+    "watch:native": "node examples/counter-app/build-bundle.mjs --watch",
     "test": "ng test",
     "lint": "oxlint . && eslint .",
     "lint:ox": "oxlint .",
