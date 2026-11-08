@@ -16,7 +16,7 @@ fn full_mvp_pipeline_with_headless_backend() {
     let mut engine = RenderEngine::new(HeadlessBackend::new());
     let mut runtime = JsRuntime::new();
 
-    // Tick 1: Mount Angular component (styles + template) from compiled `.ngb`
+    // Tick 1: Mount Angular component (signals + styles + template + declarative events)
     runtime.eval_tick(&mut engine, &script).unwrap();
     assert_eq!(engine.backend().frames.len(), 1);
     assert_eq!(engine.backend().frames[0].len(), 19);
@@ -31,7 +31,6 @@ fn full_mvp_pipeline_with_headless_backend() {
     assert!(preview.contains("Hola Mundo desde Angular Native!"));
     assert!(preview.contains(".hero-title"));
 
-    // Verify "Hola Mundo" label was created and styled in Frame #1
     assert!(
         engine.backend().frames[0].contains(&RenderCommand::SetText {
             id: hello,
@@ -39,20 +38,10 @@ fn full_mvp_pipeline_with_headless_backend() {
         })
     );
 
-    // Tick 2: Emit click event on button -> updates label in Frame #2
-    engine.listen(btn, "clicked", 1).unwrap();
-
-    engine
-        .emit_event(btn, "clicked", |eng, _| {
-            // Attempting to destroy the button mid-event must be blocked by the borrow checker
-            assert!(matches!(
-                eng.destroy_node(btn),
-                Err(EngineError::BorrowConflict { .. })
-            ));
-            runtime.eval_tick(eng, "text lbl Count: 1").unwrap();
-        })
+    // Tick 2: Declarative `(click)="increment()"` updates signal `count` -> `Count: 1`
+    runtime
+        .trigger_event(&mut engine, "btn", "clicked")
         .unwrap();
-
     assert_eq!(engine.backend().frames.len(), 2);
     assert_eq!(
         engine.backend().frames[1],
@@ -61,6 +50,29 @@ fn full_mvp_pipeline_with_headless_backend() {
             text: String::from("Count: 1"),
         }]
     );
+
+    // Tick 3: Second click increments signal `count` -> `Count: 2`
+    runtime
+        .trigger_event(&mut engine, "btn", "clicked")
+        .unwrap();
+    assert_eq!(engine.backend().frames.len(), 3);
+    assert_eq!(
+        engine.backend().frames[2],
+        vec![RenderCommand::SetText {
+            id: lbl,
+            text: String::from("Count: 2"),
+        }]
+    );
+
+    // Verify borrow conflict protection during an active event dispatch
+    engine
+        .emit_event(btn, "clicked", |eng, _| {
+            assert!(matches!(
+                eng.destroy_node(btn),
+                Err(EngineError::BorrowConflict { .. })
+            ));
+        })
+        .unwrap();
 }
 
 #[test]

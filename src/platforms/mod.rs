@@ -1,9 +1,10 @@
+pub mod gtk4_sys;
 pub mod headless;
 pub mod linux_gtk;
 pub mod macos_appkit;
 pub mod windows_winui;
 
-use crate::engine::RenderCommand;
+use crate::engine::{NodeId, RenderCommand};
 pub use headless::HeadlessBackend;
 pub use linux_gtk::GtkLinuxBackend;
 pub use macos_appkit::MacOsAppKitBackend;
@@ -28,7 +29,7 @@ pub trait PlatformBackend {
 
 /// Polymorphic backend wrapper produced by the Platform Factory from `angular.json`.
 pub enum AnyPlatformBackend {
-    LinuxGtk(GtkLinuxBackend),
+    LinuxGtk(Box<GtkLinuxBackend>),
     WindowsWinUi(WinUiBackend),
     MacOsAppKit(MacOsAppKitBackend),
 }
@@ -37,10 +38,31 @@ impl AnyPlatformBackend {
     /// Factory Method resolving the concrete OS adapter from `angular.json` `targetPlatform`.
     pub fn from_target(target_platform: &str) -> Result<Self, String> {
         match target_platform {
-            "linux-gtk4" => Ok(Self::LinuxGtk(GtkLinuxBackend::new())),
+            "linux-gtk4" => Ok(Self::LinuxGtk(Box::default())),
             "windows-winui" => Ok(Self::WindowsWinUi(WinUiBackend::new())),
             "macos-appkit" => Ok(Self::MacOsAppKit(MacOsAppKitBackend::new())),
             other => Err(format!("Unsupported targetPlatform '{other}'")),
+        }
+    }
+
+    pub fn is_native_display_active(&self) -> bool {
+        match self {
+            Self::LinuxGtk(b) => b.is_native_display_active(),
+            Self::WindowsWinUi(_) | Self::MacOsAppKit(_) => false,
+        }
+    }
+
+    pub fn open_window_count(&self) -> u32 {
+        match self {
+            Self::LinuxGtk(b) => b.open_window_count(),
+            Self::WindowsWinUi(_) | Self::MacOsAppKit(_) => 0,
+        }
+    }
+
+    pub fn step_event_loop(&self, may_block: bool) -> Vec<NodeId> {
+        match self {
+            Self::LinuxGtk(b) => b.step_event_loop(may_block),
+            Self::WindowsWinUi(_) | Self::MacOsAppKit(_) => Vec::new(),
         }
     }
 }

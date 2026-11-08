@@ -2,6 +2,7 @@ use ng_native_engine::config::AngularNativeConfig;
 use ng_native_engine::engine::RenderEngine;
 use ng_native_engine::platforms::AnyPlatformBackend;
 use ng_native_engine::runtime::JsRuntime;
+use std::env;
 use std::fs;
 
 fn main() {
@@ -9,7 +10,7 @@ fn main() {
     let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
     let bundle_path = format!("{}/main.ngb", cfg.output_path);
     let bootstrap_script = fs::read_to_string(&bundle_path).unwrap_or_else(|_| {
-        panic!("Bundle not found at '{bundle_path}'. Run `node examples/counter-app/build-bundle.mjs` first.")
+        panic!("Bundle not found at '{bundle_path}'. Run `pnpm run build` first.")
     });
 
     println!(
@@ -22,7 +23,7 @@ fn main() {
     let mut engine = RenderEngine::new(backend);
     let mut js_runtime = JsRuntime::new();
 
-    // 3. Tick #1: JS Runtime evaluates the compiled Angular bundle (styles + template) and flushes Frame #1
+    // 3. Tick #1: JS Runtime evaluates the compiled Angular bundle (styles + template + bindings)
     js_runtime
         .eval_tick(&mut engine, &bootstrap_script)
         .unwrap();
@@ -32,20 +33,28 @@ fn main() {
     println!("\n--- Rendered Window Preview ---");
     println!("{}", engine.render_window_preview(win_id).unwrap());
 
-    // 5. Register click event on the button handle resolved from JS runtime
-    let btn_id = js_runtime.resolve_var("btn").unwrap();
-    engine.listen(btn_id, "clicked", 100).unwrap();
-
-    // 6. Tick #2: User clicks the button -> JS updates label -> Engine flushes Frame #2
-    println!("\n--- User clicks 'Increment' button ---");
-    engine
-        .emit_event(btn_id, "clicked", |eng, _listener_id| {
-            js_runtime.eval_tick(eng, "text lbl Count: 1").unwrap();
-        })
-        .unwrap();
+    if engine.backend().is_native_display_active() && env::var("NG_NATIVE_BATCH").is_err() {
+        println!(
+            "\n[GTK4 Native Window Active] Opened native Linux window '{}'. Click 'Increment' or close the window to exit.",
+            cfg.project_name
+        );
+        while engine.backend().open_window_count() > 0 {
+            let clicked_nodes = engine.backend().step_event_loop(true);
+            for clicked_id in clicked_nodes {
+                js_runtime
+                    .trigger_node_event(&mut engine, clicked_id, "clicked")
+                    .unwrap();
+            }
+        }
+    } else {
+        // Pump non-blocking GTK4 events if available and run declarative click simulation
+        let _ = engine.backend().step_event_loop(false);
+        println!("\n--- Simulating declarative (click)=\"increment()\" on 'btn' ---");
+        js_runtime
+            .trigger_event(&mut engine, "btn", "clicked")
+            .unwrap();
+    }
 
     println!("\n--- Scene Graph Snapshot ---");
     engine.print_tree(win_id, 0).unwrap();
-
-    engine.unlisten(100);
 }

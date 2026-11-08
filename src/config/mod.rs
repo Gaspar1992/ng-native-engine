@@ -10,13 +10,16 @@ pub struct AngularNativeConfig {
 }
 
 impl AngularNativeConfig {
-    /// Reads and extracts native build settings from an `angular.json` file.
+    /// Reads and extracts native build settings from an Angular CLI `angular.json` file.
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, EngineError> {
         let content = fs::read_to_string(path.as_ref())
             .map_err(|e| EngineError::ConfigError(e.to_string()))?;
 
         let project_name = Self::extract_json_string(&content, "defaultProject")
-            .ok_or_else(|| EngineError::ConfigError(String::from("Missing 'defaultProject'")))?;
+            .or_else(|| Self::extract_first_project_name(&content))
+            .ok_or_else(|| {
+                EngineError::ConfigError(String::from("Missing project in 'angular.json'"))
+            })?;
         let target_platform = Self::extract_json_string(&content, "targetPlatform")
             .ok_or_else(|| EngineError::ConfigError(String::from("Missing 'targetPlatform'")))?;
         let output_path = Self::extract_json_string(&content, "outputPath")
@@ -27,6 +30,20 @@ impl AngularNativeConfig {
             target_platform,
             output_path,
         })
+    }
+
+    fn extract_first_project_name(json: &str) -> Option<String> {
+        let projects_key = "\"projects\"";
+        let start = json.find(projects_key)? + projects_key.len();
+        let rest = &json[start..];
+        let brace = rest.find('{')? + 1;
+        let inside = rest[brace..].trim_start();
+        if !inside.starts_with('"') {
+            return None;
+        }
+        let name_part = &inside[1..];
+        let end_quote = name_part.find('"')?;
+        Some(name_part[..end_quote].to_string())
     }
 
     fn extract_json_string(json: &str, key: &str) -> Option<String> {
