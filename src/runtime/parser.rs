@@ -141,12 +141,12 @@ pub fn parse_instruction(line: &str) -> Result<Instruction, EngineError> {
         }),
         ["text", var_name, rest @ ..] => Ok(Instruction::SetText {
             var_name: (*var_name).to_string(),
-            text: rest.join(" "),
+            text: normalize_text_payload(rest),
         }),
-        ["attr", var_name, key, rest @ ..] if !rest.is_empty() => Ok(Instruction::SetAttribute {
+        ["attr", var_name, key, rest @ ..] => Ok(Instruction::SetAttribute {
             var_name: (*var_name).to_string(),
             key: (*key).to_string(),
-            value: rest.join(" "),
+            value: normalize_text_payload(rest),
         }),
         ["icon", var_name, app_id, ico_path] => Ok(Instruction::SetIcon {
             var_name: (*var_name).to_string(),
@@ -180,6 +180,19 @@ pub fn parse_instruction(line: &str) -> Result<Instruction, EngineError> {
         }),
         _ => Err(EngineError::ScriptSyntaxError(line.to_string())),
     }
+}
+
+fn normalize_text_payload(parts: &[&str]) -> String {
+    let joined = parts.join(" ");
+    if joined == "\"\"" || joined == "''" {
+        return String::new();
+    }
+    if (joined.starts_with('"') && joined.ends_with('"') && joined.len() >= 2)
+        || (joined.starts_with('\'') && joined.ends_with('\'') && joined.len() >= 2)
+    {
+        return joined[1..joined.len() - 1].to_string();
+    }
+    joined
 }
 
 fn parse_i64(line: &str, raw: &str) -> Result<i64, EngineError> {
@@ -246,6 +259,39 @@ mod tests {
                 parent_var: String::from("vbox"),
                 child_var: String::from("extra"),
                 ref_var: Some(String::from("anchor_if")),
+            }
+        );
+    }
+
+    #[test]
+    fn supports_empty_and_quoted_text_or_attribute_payloads() {
+        let script = r#"
+            text entry1 ""
+            attr entry1 value ""
+            attr entry1 placeholder "Escribe tu nombre aquí"
+        "#;
+        let parsed = parse_script(script).unwrap();
+        assert_eq!(
+            parsed[0],
+            Instruction::SetText {
+                var_name: String::from("entry1"),
+                text: String::new(),
+            }
+        );
+        assert_eq!(
+            parsed[1],
+            Instruction::SetAttribute {
+                var_name: String::from("entry1"),
+                key: String::from("value"),
+                value: String::new(),
+            }
+        );
+        assert_eq!(
+            parsed[2],
+            Instruction::SetAttribute {
+                var_name: String::from("entry1"),
+                key: String::from("placeholder"),
+                value: String::from("Escribe tu nombre aquí"),
             }
         );
     }

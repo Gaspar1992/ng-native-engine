@@ -10,7 +10,7 @@ pub mod widget;
 use crate::platforms::PlatformBackend;
 use arena::Arena;
 pub use commands::{CommandQueue, RenderCommand};
-use events::EventRegistry;
+pub use events::{EventPayload, EventRegistry, NativeEvent};
 pub use icons::{IconResolution, WindowIconAsset};
 pub use node::{EngineError, NodeId, StyleId};
 use std::collections::HashMap;

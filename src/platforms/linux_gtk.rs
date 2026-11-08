@@ -2,14 +2,14 @@
 
 use super::PlatformBackend;
 use super::gtk4_sys::{Gtk4Sys, GtkHandle};
-use crate::engine::{NodeId, RenderCommand, StyleId, StyleRule};
+use crate::engine::{EventPayload, NativeEvent, NodeId, RenderCommand, StyleId, StyleRule};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::fmt::Write as _;
 
 thread_local! {
-    static CLICKED_NODES: RefCell<Vec<NodeId>> = const { RefCell::new(Vec::new()) };
+    static PENDING_EVENTS: RefCell<Vec<NativeEvent>> = const { RefCell::new(Vec::new()) };
 }
 
 unsafe extern "C" fn on_gtk_button_clicked(_btn: *mut c_void, user_data: *mut c_void) {
@@ -17,8 +17,12 @@ unsafe extern "C" fn on_gtk_button_clicked(_btn: *mut c_void, user_data: *mut c_
     let index = packed >> 32;
     #[allow(clippy::cast_possible_truncation)]
     let generation = (packed & 0xFFFF_FFFF) as u32;
-    CLICKED_NODES.with(|queue| {
-        queue.borrow_mut().push(NodeId { index, generation });
+    PENDING_EVENTS.with(|queue| {
+        queue.borrow_mut().push(NativeEvent {
+            node: NodeId { index, generation },
+            event_name: String::from("clicked"),
+            payload: EventPayload::None,
+        });
     });
 }
 
@@ -74,10 +78,17 @@ impl GtkLinuxBackend {
     }
 
     pub fn step_event_loop(&self, may_block: bool) -> Vec<NodeId> {
+        self.step_native_events(may_block)
+            .into_iter()
+            .map(|ev| ev.node)
+            .collect()
+    }
+
+    pub fn step_native_events(&self, may_block: bool) -> Vec<NativeEvent> {
         if let Some(gtk) = &self.gtk {
             gtk.step_main_context(may_block);
         }
-        CLICKED_NODES.with(|q| std::mem::take(&mut *q.borrow_mut()))
+        PENDING_EVENTS.with(|q| std::mem::take(&mut *q.borrow_mut()))
     }
 
     fn rebuild_css_stylesheet(&self) -> String {

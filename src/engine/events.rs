@@ -1,5 +1,22 @@
 use super::node::NodeId;
 
+/// Typed payload carried by a native OS widget signal (`changed`, `toggled`, `value-changed`, `clicked`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EventPayload {
+    None,
+    Text(String),
+    Bool(bool),
+    Int(i64),
+}
+
+/// Complete native UI event dispatched from an OS backend into `RenderEngine` and `JsRuntime`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NativeEvent {
+    pub node: NodeId,
+    pub event_name: String,
+    pub payload: EventPayload,
+}
+
 #[derive(Debug, Clone)]
 pub struct EventListener {
     pub listener_id: u64,

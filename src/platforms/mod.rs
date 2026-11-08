@@ -1,10 +1,11 @@
 pub mod gtk4_sys;
+pub mod gtk4_widgets;
 pub mod headless;
 pub mod linux_gtk;
 pub mod macos_appkit;
 pub mod windows_winui;
 
-use crate::engine::{NodeId, RenderCommand};
+use crate::engine::{NativeEvent, NodeId, RenderCommand};
 pub use headless::HeadlessBackend;
 pub use linux_gtk::GtkLinuxBackend;
 pub use macos_appkit::MacOsAppKitBackend;
@@ -66,6 +67,13 @@ impl AnyPlatformBackend {
     pub fn step_event_loop(&self, may_block: bool) -> Vec<NodeId> {
         match self {
             Self::LinuxGtk(b) => b.step_event_loop(may_block),
+            Self::WindowsWinUi(_) | Self::MacOsAppKit(_) => Vec::new(),
+        }
+    }
+
+    pub fn step_native_events(&self, may_block: bool) -> Vec<NativeEvent> {
+        match self {
+            Self::LinuxGtk(b) => b.step_native_events(may_block),
             Self::WindowsWinUi(_) | Self::MacOsAppKit(_) => Vec::new(),
         }
     }

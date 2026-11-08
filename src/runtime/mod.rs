@@ -2,7 +2,7 @@ pub mod js_engine;
 pub mod jsc_sys;
 pub mod parser;
 
-use crate::engine::{EngineError, NodeId, RenderEngine};
+use crate::engine::{EngineError, EventPayload, NodeId, RenderEngine};
 use crate::platforms::PlatformBackend;
 pub use js_engine::{AnyJsEngine, JsEngineBackend, JscEngine, QuickJsEngine};
 pub use parser::{Instruction, parse_instruction, parse_script};
@@ -125,8 +125,20 @@ impl JsRuntime {
         var_name: &str,
         event_name: &str,
     ) -> Result<(), EngineError> {
+        self.trigger_event_with_payload(engine, var_name, event_name, &EventPayload::None)
+    }
+
+    /// Dispatches a native OS event carrying a typed `EventPayload` (`Text`, `Bool`, `Int`).
+    pub fn trigger_event_with_payload<B: PlatformBackend>(
+        &mut self,
+        engine: &mut RenderEngine<B>,
+        var_name: &str,
+        event_name: &str,
+        payload: &EventPayload,
+    ) -> Result<(), EngineError> {
         let node_id = self.resolve_var(var_name)?;
-        self.js_engine.dispatch_js_event(var_name, event_name)?;
+        self.js_engine
+            .dispatch_js_event_with_payload(var_name, event_name, payload)?;
         let drained = self.js_engine.drain_native_commands()?;
         if !drained.trim().is_empty() {
             self.eval_tick(engine, &drained)?;

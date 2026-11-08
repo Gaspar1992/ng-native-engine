@@ -1,5 +1,5 @@
 use super::jsc_sys::JscSys;
-use crate::engine::EngineError;
+use crate::engine::{EngineError, EventPayload};
 
 /// Standard `globalThis.__NG_NATIVE__` + Web/Host globals (`console`, `queueMicrotask`, `setTimeout`)
 /// injected into every JS engine context.
@@ -121,7 +121,15 @@ pub trait JsEngineBackend {
     fn engine_name(&self) -> &str;
     fn is_jit_enabled(&self) -> bool;
     fn eval_script(&mut self, js_code: &str) -> Result<String, EngineError>;
-    fn dispatch_js_event(&mut self, node_var: &str, event_name: &str) -> Result<(), EngineError>;
+    fn dispatch_js_event(&mut self, node_var: &str, event_name: &str) -> Result<(), EngineError> {
+        self.dispatch_js_event_with_payload(node_var, event_name, &EventPayload::None)
+    }
+    fn dispatch_js_event_with_payload(
+        &mut self,
+        node_var: &str,
+        event_name: &str,
+        payload: &EventPayload,
+    ) -> Result<(), EngineError>;
     fn drain_native_commands(&mut self) -> Result<String, EngineError>;
 }
 
@@ -175,15 +183,27 @@ impl JsEngineBackend for JscEngine {
         }
     }
 
-    fn dispatch_js_event(&mut self, node_var: &str, event_name: &str) -> Result<(), EngineError> {
+    fn dispatch_js_event_with_payload(
+        &mut self,
+        node_var: &str,
+        event_name: &str,
+        payload: &EventPayload,
+    ) -> Result<(), EngineError> {
         if let Some(jsc) = &self.jsc {
+            let payload_js = match payload {
+                EventPayload::None => String::from("{}"),
+                EventPayload::Text(t) => format!("{{ value: {t:?} }}"),
+                EventPayload::Bool(b) => format!("{{ value: {b}, active: {b} }}"),
+                EventPayload::Int(n) => format!("{{ value: {n} }}"),
+            };
             let call = format!(
-                "globalThis.__NG_NATIVE__.__dispatchEvent({node_var:?}, {event_name:?}); globalThis.__NG_NATIVE__.__flushTimers();"
+                "globalThis.__NG_NATIVE__.__dispatchEvent({node_var:?}, {event_name:?}, {payload_js}); globalThis.__NG_NATIVE__.__flushTimers();"
             );
             let _ = jsc.eval(&call).map_err(EngineError::ScriptSyntaxError)?;
             Ok(())
         } else {
-            self.fallback.dispatch_js_event(node_var, event_name)
+            self.fallback
+                .dispatch_js_event_with_payload(node_var, event_name, payload)
         }
     }
 
@@ -299,7 +319,12 @@ impl JsEngineBackend for QuickJsEngine {
         Ok(last_result)
     }
 
-    fn dispatch_js_event(&mut self, _node_var: &str, _event_name: &str) -> Result<(), EngineError> {
+    fn dispatch_js_event_with_payload(
+        &mut self,
+        _node_var: &str,
+        _event_name: &str,
+        _payload: &EventPayload,
+    ) -> Result<(), EngineError> {
         Ok(())
     }
 
@@ -356,10 +381,15 @@ impl JsEngineBackend for AnyJsEngine {
         }
     }
 
-    fn dispatch_js_event(&mut self, node_var: &str, event_name: &str) -> Result<(), EngineError> {
+    fn dispatch_js_event_with_payload(
+        &mut self,
+        node_var: &str,
+        event_name: &str,
+        payload: &EventPayload,
+    ) -> Result<(), EngineError> {
         match self {
-            Self::Jsc(e) => e.dispatch_js_event(node_var, event_name),
-            Self::QuickJs(e) => e.dispatch_js_event(node_var, event_name),
+            Self::Jsc(e) => e.dispatch_js_event_with_payload(node_var, event_name, payload),
+            Self::QuickJs(e) => e.dispatch_js_event_with_payload(node_var, event_name, payload),
         }
     }
 
