@@ -65,10 +65,15 @@ fn main() {
             cfg.project_name, bundle_path
         );
         while engine.backend().open_window_count() > 0 {
-            let clicked_nodes = engine.backend().step_event_loop(false);
-            for clicked_id in clicked_nodes {
+            let native_events = engine.backend().step_native_events(false);
+            for ev in native_events {
                 js_runtime
-                    .trigger_node_event(&mut engine, clicked_id, "clicked")
+                    .trigger_node_event_with_payload(
+                        &mut engine,
+                        ev.node,
+                        &ev.event_name,
+                        &ev.payload,
+                    )
                     .unwrap();
             }
 

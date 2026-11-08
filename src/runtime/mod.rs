@@ -1,6 +1,7 @@
 pub mod js_engine;
 pub mod jsc_sys;
 pub mod parser;
+pub mod quickjs_engine;
 
 use crate::engine::{EngineError, EventPayload, NodeId, RenderEngine};
 use crate::platforms::PlatformBackend;
@@ -142,6 +143,30 @@ impl JsRuntime {
         let drained = self.js_engine.drain_native_commands()?;
         if !drained.trim().is_empty() {
             self.eval_tick(engine, &drained)?;
+        }
+        self.trigger_node_event(engine, node_id, event_name)
+    }
+
+    /// Dispatches a native OS event by `NodeId` with a typed `EventPayload`, notifying both
+    /// the embedded JS engine (`__dispatchEvent`) and declarative scene handlers.
+    pub fn trigger_node_event_with_payload<B: PlatformBackend>(
+        &mut self,
+        engine: &mut RenderEngine<B>,
+        node_id: NodeId,
+        event_name: &str,
+        payload: &EventPayload,
+    ) -> Result<(), EngineError> {
+        let var_name: Option<String> = self
+            .variables
+            .iter()
+            .find_map(|(k, id)| (*id == node_id).then(|| k.clone()));
+        if let Some(var) = var_name {
+            self.js_engine
+                .dispatch_js_event_with_payload(&var, event_name, payload)?;
+            let drained = self.js_engine.drain_native_commands()?;
+            if !drained.trim().is_empty() {
+                self.eval_tick(engine, &drained)?;
+            }
         }
         self.trigger_node_event(engine, node_id, event_name)
     }

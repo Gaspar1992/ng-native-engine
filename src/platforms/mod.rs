@@ -1,3 +1,4 @@
+pub mod gtk4_callbacks;
 pub mod gtk4_sys;
 pub mod gtk4_widgets;
 pub mod headless;

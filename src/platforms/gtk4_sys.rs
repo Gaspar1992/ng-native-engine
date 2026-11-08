@@ -19,6 +19,7 @@ pub const GTK_ORIENTATION_VERTICAL: c_int = 1;
 const GTK_STYLE_PROVIDER_PRIORITY_APPLICATION: c_uint = 600;
 
 pub type GtkClickCallback = unsafe extern "C" fn(*mut c_void, *mut c_void);
+pub type GtkNotifyCallback = unsafe extern "C" fn(*mut c_void, *mut c_void, *mut c_void);
 
 /// Dynamically loaded `GTK4` / `GLib` / `GObject` / `GIO` function table for Linux.
 /// Isolates all C FFI symbol loading (`dlopen` / `dlsym`) from widget operations.
@@ -61,16 +62,23 @@ pub struct Gtk4Sys {
     pub(super) gtk_entry_new: unsafe extern "C" fn() -> *mut c_void,
     pub(super) gtk_entry_set_placeholder_text: unsafe extern "C" fn(*mut c_void, *const c_char),
     pub(super) gtk_editable_set_text: unsafe extern "C" fn(*mut c_void, *const c_char),
+    pub(super) gtk_editable_get_text: unsafe extern "C" fn(*mut c_void) -> *const c_char,
     pub(super) gtk_switch_new: unsafe extern "C" fn() -> *mut c_void,
     pub(super) gtk_switch_set_active: unsafe extern "C" fn(*mut c_void, c_int),
+    pub(super) gtk_switch_get_active: unsafe extern "C" fn(*mut c_void) -> c_int,
     pub(super) gtk_check_button_new_with_label: unsafe extern "C" fn(*const c_char) -> *mut c_void,
     pub(super) gtk_check_button_set_label: unsafe extern "C" fn(*mut c_void, *const c_char),
     pub(super) gtk_check_button_set_active: unsafe extern "C" fn(*mut c_void, c_int),
+    pub(super) gtk_check_button_get_active: unsafe extern "C" fn(*mut c_void) -> c_int,
     pub(super) gtk_scale_new_with_range: unsafe extern "C" fn(c_int, f64, f64, f64) -> *mut c_void,
     pub(super) gtk_range_set_value: unsafe extern "C" fn(*mut c_void, f64),
+    pub(super) gtk_range_get_value: unsafe extern "C" fn(*mut c_void) -> f64,
     pub(super) gtk_drop_down_new_from_strings:
         unsafe extern "C" fn(*const *const c_char) -> *mut c_void,
     pub(super) gtk_drop_down_set_selected: unsafe extern "C" fn(*mut c_void, c_uint),
+    pub(super) gtk_drop_down_get_selected: unsafe extern "C" fn(*mut c_void) -> c_uint,
+    pub(super) gtk_drop_down_set_model: unsafe extern "C" fn(*mut c_void, *mut c_void),
+    pub(super) gtk_string_list_new: unsafe extern "C" fn(*const *const c_char) -> *mut c_void,
     pub(super) gtk_widget_add_css_class: unsafe extern "C" fn(*mut c_void, *const c_char),
     pub(super) gtk_widget_set_hexpand: unsafe extern "C" fn(*mut c_void, c_int),
     pub(super) gtk_widget_set_vexpand: unsafe extern "C" fn(*mut c_void, c_int),
@@ -86,11 +94,12 @@ pub struct Gtk4Sys {
     pub(super) g_signal_connect_data: unsafe extern "C" fn(
         *mut c_void,
         *const c_char,
-        GtkClickCallback,
+        *const c_void,
         *mut c_void,
         *mut c_void,
         c_uint,
     ) -> c_ulong,
+    pub(super) g_object_unref: unsafe extern "C" fn(*mut c_void),
     pub(super) g_list_model_get_n_items: unsafe extern "C" fn(*mut c_void) -> c_uint,
     pub(super) css_provider: *mut c_void,
     pub(super) icon_theme: *mut c_void,
@@ -185,8 +194,10 @@ impl Gtk4Sys {
                     c"gtk_entry_set_placeholder_text",
                 )?,
                 gtk_editable_set_text: Self::load_fn(gtk_lib, c"gtk_editable_set_text")?,
+                gtk_editable_get_text: Self::load_fn(gtk_lib, c"gtk_editable_get_text")?,
                 gtk_switch_new: Self::load_fn(gtk_lib, c"gtk_switch_new")?,
                 gtk_switch_set_active: Self::load_fn(gtk_lib, c"gtk_switch_set_active")?,
+                gtk_switch_get_active: Self::load_fn(gtk_lib, c"gtk_switch_get_active")?,
                 gtk_check_button_new_with_label: Self::load_fn(
                     gtk_lib,
                     c"gtk_check_button_new_with_label",
@@ -196,13 +207,21 @@ impl Gtk4Sys {
                     gtk_lib,
                     c"gtk_check_button_set_active",
                 )?,
+                gtk_check_button_get_active: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_check_button_get_active",
+                )?,
                 gtk_scale_new_with_range: Self::load_fn(gtk_lib, c"gtk_scale_new_with_range")?,
                 gtk_range_set_value: Self::load_fn(gtk_lib, c"gtk_range_set_value")?,
+                gtk_range_get_value: Self::load_fn(gtk_lib, c"gtk_range_get_value")?,
                 gtk_drop_down_new_from_strings: Self::load_fn(
                     gtk_lib,
                     c"gtk_drop_down_new_from_strings",
                 )?,
                 gtk_drop_down_set_selected: Self::load_fn(gtk_lib, c"gtk_drop_down_set_selected")?,
+                gtk_drop_down_get_selected: Self::load_fn(gtk_lib, c"gtk_drop_down_get_selected")?,
+                gtk_drop_down_set_model: Self::load_fn(gtk_lib, c"gtk_drop_down_set_model")?,
+                gtk_string_list_new: Self::load_fn(gtk_lib, c"gtk_string_list_new")?,
                 gtk_widget_add_css_class: Self::load_fn(gtk_lib, c"gtk_widget_add_css_class")?,
                 gtk_widget_set_hexpand: Self::load_fn(gtk_lib, c"gtk_widget_set_hexpand")?,
                 gtk_widget_set_vexpand: Self::load_fn(gtk_lib, c"gtk_widget_set_vexpand")?,
@@ -222,6 +241,7 @@ impl Gtk4Sys {
                 g_set_prgname,
                 g_set_application_name: Self::load_fn(glib_lib, c"g_set_application_name")?,
                 g_signal_connect_data: Self::load_fn(gobject_lib, c"g_signal_connect_data")?,
+                g_object_unref: Self::load_fn(gobject_lib, c"g_object_unref")?,
                 g_list_model_get_n_items: Self::load_fn(gio_lib, c"g_list_model_get_n_items")?,
                 css_provider,
                 icon_theme,

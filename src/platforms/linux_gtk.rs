@@ -1,30 +1,15 @@
 #![allow(unsafe_code)]
 
 use super::PlatformBackend;
+use super::gtk4_callbacks::{
+    drain_pending_events, on_gtk_button_clicked, on_gtk_check_toggled,
+    on_gtk_drop_down_selected_notify, on_gtk_entry_changed, on_gtk_scale_value_changed,
+    on_gtk_switch_active_notify, pack_node_id,
+};
 use super::gtk4_sys::{Gtk4Sys, GtkHandle};
 use crate::engine::{EventPayload, NativeEvent, NodeId, RenderCommand, StyleId, StyleRule};
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::c_void;
 use std::fmt::Write as _;
-
-thread_local! {
-    static PENDING_EVENTS: RefCell<Vec<NativeEvent>> = const { RefCell::new(Vec::new()) };
-}
-
-unsafe extern "C" fn on_gtk_button_clicked(_btn: *mut c_void, user_data: *mut c_void) {
-    let packed = user_data as usize;
-    let index = packed >> 32;
-    #[allow(clippy::cast_possible_truncation)]
-    let generation = (packed & 0xFFFF_FFFF) as u32;
-    PENDING_EVENTS.with(|queue| {
-        queue.borrow_mut().push(NativeEvent {
-            node: NodeId { index, generation },
-            event_name: String::from("clicked"),
-            payload: EventPayload::None,
-        });
-    });
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GtkWidgetType {
@@ -93,7 +78,28 @@ impl GtkLinuxBackend {
         if let Some(gtk) = &self.gtk {
             gtk.step_main_context(may_block);
         }
-        PENDING_EVENTS.with(|q| std::mem::take(&mut *q.borrow_mut()))
+        let mut events = drain_pending_events();
+        if let Some(gtk) = &self.gtk {
+            for ev in &mut events {
+                if let Some(widget) = self.widgets.get(&ev.node)
+                    && let Some(handle) = widget.handle
+                {
+                    ev.payload = match widget.kind {
+                        GtkWidgetType::Entry => EventPayload::Text(gtk.get_entry_text(handle)),
+                        GtkWidgetType::Switch => EventPayload::Bool(gtk.get_switch_active(handle)),
+                        GtkWidgetType::CheckButton => {
+                            EventPayload::Bool(gtk.get_check_button_active(handle))
+                        }
+                        GtkWidgetType::Slider => EventPayload::Int(gtk.get_slider_value(handle)),
+                        GtkWidgetType::DropDown => {
+                            EventPayload::Int(gtk.get_drop_down_selected(handle))
+                        }
+                        _ => EventPayload::None,
+                    };
+                }
+            }
+        }
+        events
     }
 
     fn rebuild_css_stylesheet(&self) -> String {
@@ -218,20 +224,48 @@ impl GtkLinuxBackend {
             "ng-label" | "gtk-label" => (Some(gtk.create_label()), GtkWidgetType::Label),
             "ng-button" | "gtk-button" => {
                 let btn = gtk.create_button();
-                let packed = (id.index << 32) | (id.generation as usize);
-                gtk.connect_clicked(btn, on_gtk_button_clicked, packed);
+                gtk.connect_clicked(btn, on_gtk_button_clicked, pack_node_id(id));
                 (Some(btn), GtkWidgetType::Button)
             }
-            "ng-entry" | "gtk-entry" => (Some(gtk.create_entry()), GtkWidgetType::Entry),
-            "ng-switch" | "gtk-switch" => (Some(gtk.create_switch()), GtkWidgetType::Switch),
+            "ng-entry" | "gtk-entry" => {
+                let entry = gtk.create_entry();
+                gtk.connect_signal(entry, c"changed", on_gtk_entry_changed, pack_node_id(id));
+                (Some(entry), GtkWidgetType::Entry)
+            }
+            "ng-switch" | "gtk-switch" => {
+                let sw = gtk.create_switch();
+                gtk.connect_notify_signal(
+                    sw,
+                    c"notify::active",
+                    on_gtk_switch_active_notify,
+                    pack_node_id(id),
+                );
+                (Some(sw), GtkWidgetType::Switch)
+            }
             "ng-checkbox" | "ng-check" | "gtk-check-button" => {
-                (Some(gtk.create_check_button()), GtkWidgetType::CheckButton)
+                let chk = gtk.create_check_button();
+                gtk.connect_signal(chk, c"toggled", on_gtk_check_toggled, pack_node_id(id));
+                (Some(chk), GtkWidgetType::CheckButton)
             }
             "ng-slider" | "ng-scale" | "gtk-scale" => {
-                (Some(gtk.create_slider()), GtkWidgetType::Slider)
+                let scale = gtk.create_slider();
+                gtk.connect_signal(
+                    scale,
+                    c"value-changed",
+                    on_gtk_scale_value_changed,
+                    pack_node_id(id),
+                );
+                (Some(scale), GtkWidgetType::Slider)
             }
             "ng-select" | "ng-dropdown" | "gtk-drop-down" => {
-                (Some(gtk.create_drop_down()), GtkWidgetType::DropDown)
+                let dd = gtk.create_drop_down();
+                gtk.connect_notify_signal(
+                    dd,
+                    c"notify::selected",
+                    on_gtk_drop_down_selected_notify,
+                    pack_node_id(id),
+                );
+                (Some(dd), GtkWidgetType::DropDown)
             }
             "ng-anchor" | "#comment" => (None, GtkWidgetType::Anchor),
             _ => return,
@@ -334,6 +368,9 @@ impl GtkLinuxBackend {
                 if let Ok(v) = value.trim().parse::<f64>() {
                     gtk.set_slider_value(handle, v);
                 }
+            }
+            (GtkWidgetType::DropDown, "options") => {
+                gtk.set_drop_down_options(handle, value);
             }
             (GtkWidgetType::DropDown, "selected" | "value") => {
                 if let Ok(idx) = value.trim().parse::<u32>() {

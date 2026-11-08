@@ -2,8 +2,9 @@
 
 use super::gtk4_sys::{
     GTK_ORIENTATION_HORIZONTAL, GTK_ORIENTATION_VERTICAL, Gtk4Sys, GtkClickCallback, GtkHandle,
+    GtkNotifyCallback,
 };
-use std::ffi::{CString, c_int, c_void};
+use std::ffi::{CStr, CString, c_int, c_void};
 
 impl Gtk4Sys {
     pub fn load_css(&self, css: &str) {
@@ -255,6 +256,17 @@ impl Gtk4Sys {
         }
     }
 
+    pub fn get_entry_text(&self, entry: GtkHandle) -> String {
+        unsafe {
+            let ptr = (self.gtk_editable_get_text)(entry.0);
+            if ptr.is_null() {
+                String::new()
+            } else {
+                CStr::from_ptr(ptr).to_string_lossy().into_owned()
+            }
+        }
+    }
+
     pub fn set_entry_placeholder(&self, entry: GtkHandle, placeholder: &str) {
         if let Ok(c_str) = CString::new(placeholder) {
             unsafe {
@@ -267,6 +279,10 @@ impl Gtk4Sys {
         unsafe {
             (self.gtk_switch_set_active)(sw.0, i32::from(active));
         }
+    }
+
+    pub fn get_switch_active(&self, sw: GtkHandle) -> bool {
+        unsafe { (self.gtk_switch_get_active)(sw.0) != 0 }
     }
 
     pub fn set_check_button_label(&self, chk: GtkHandle, text: &str) {
@@ -283,9 +299,36 @@ impl Gtk4Sys {
         }
     }
 
+    pub fn get_check_button_active(&self, chk: GtkHandle) -> bool {
+        unsafe { (self.gtk_check_button_get_active)(chk.0) != 0 }
+    }
+
     pub fn set_slider_value(&self, scale: GtkHandle, val: f64) {
         unsafe {
             (self.gtk_range_set_value)(scale.0, val);
+        }
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn get_slider_value(&self, scale: GtkHandle) -> i64 {
+        unsafe { (self.gtk_range_get_value)(scale.0).round() as i64 }
+    }
+
+    pub fn set_drop_down_options(&self, dd: GtkHandle, raw_csv: &str) {
+        let owned: Vec<CString> = raw_csv
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .filter_map(|s| CString::new(s).ok())
+            .collect();
+        let mut ptrs: Vec<*const std::ffi::c_char> = owned.iter().map(|c| c.as_ptr()).collect();
+        ptrs.push(std::ptr::null());
+        unsafe {
+            let model = (self.gtk_string_list_new)(ptrs.as_ptr());
+            if !model.is_null() {
+                (self.gtk_drop_down_set_model)(dd.0, model);
+                (self.g_object_unref)(model);
+            }
         }
     }
 
@@ -293,6 +336,10 @@ impl Gtk4Sys {
         unsafe {
             (self.gtk_drop_down_set_selected)(dd.0, idx);
         }
+    }
+
+    pub fn get_drop_down_selected(&self, dd: GtkHandle) -> i64 {
+        unsafe { i64::from((self.gtk_drop_down_get_selected)(dd.0)) }
     }
 
     pub fn add_css_class(&self, widget: GtkHandle, class_name: &str) {
@@ -341,11 +388,40 @@ impl Gtk4Sys {
         callback: GtkClickCallback,
         packed_node_id: usize,
     ) {
+        self.connect_signal(btn, c"clicked", callback, packed_node_id);
+    }
+
+    pub fn connect_signal(
+        &self,
+        widget: GtkHandle,
+        signal_name: &CStr,
+        callback: GtkClickCallback,
+        packed_node_id: usize,
+    ) {
         unsafe {
             (self.g_signal_connect_data)(
-                btn.0,
-                c"clicked".as_ptr(),
-                callback,
+                widget.0,
+                signal_name.as_ptr(),
+                callback as *const c_void,
+                packed_node_id as *mut c_void,
+                std::ptr::null_mut(),
+                0,
+            );
+        }
+    }
+
+    pub fn connect_notify_signal(
+        &self,
+        widget: GtkHandle,
+        signal_name: &CStr,
+        callback: GtkNotifyCallback,
+        packed_node_id: usize,
+    ) {
+        unsafe {
+            (self.g_signal_connect_data)(
+                widget.0,
+                signal_name.as_ptr(),
+                callback as *const c_void,
                 packed_node_id as *mut c_void,
                 std::ptr::null_mut(),
                 0,
