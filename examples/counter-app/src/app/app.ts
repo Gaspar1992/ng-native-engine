@@ -1,8 +1,10 @@
 import { Component, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
+import { PokemonCard } from './pokemon-card';
+import { TypeBadge } from './type-badge';
 
 @Component({
   selector: 'app-root',
-  imports: [],
+  imports: [PokemonCard, TypeBadge],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './app.html',
   styleUrl: './app.css',

@@ -119,8 +119,36 @@ export function compileBundle({ rebuildIcons = true } = {}) {
   const iconRelPath = `${projectCfg.root}/public/${iconFileName}`;
   const iconAbsPath = resolve(rootDir, iconRelPath);
 
-  const styleRules = parseStylesCss(cssSource);
-  const templateAst = parseTemplateHtml(htmlSource, state, numericSignals);
+  const componentRegistry = {};
+  const allStyleRules = [...parseStylesCss(cssSource)];
+
+  const candidateFiles = ['pokemon-card.ts', 'type-badge.ts'];
+  for (const file of candidateFiles) {
+    const filePath = resolve(appDir, file);
+    if (existsSync(filePath)) {
+      const ts = readFileSync(filePath, 'utf8');
+      const meta = extractComponentMetadata(ts, file);
+      const tmplPath = resolve(appDir, meta.component.templateUrl);
+      const stylePath = resolve(appDir, meta.component.styleUrl);
+      const templateHtml = existsSync(tmplPath) ? readFileSync(tmplPath, 'utf8') : '';
+      if (existsSync(stylePath)) {
+        const rules = parseStylesCss(readFileSync(stylePath, 'utf8'));
+        allStyleRules.push(...rules);
+      }
+      componentRegistry[meta.component.selector] = {
+        templateHtml,
+        templateUrl: meta.component.templateUrl,
+      };
+    }
+  }
+
+  const templateAst = parseTemplateHtml(
+    htmlSource,
+    state,
+    numericSignals,
+    'app.html',
+    componentRegistry,
+  );
 
   const outDir = resolve(rootDir, nativeOptions.outputPath);
   mkdirSync(outDir, { recursive: true });
@@ -134,7 +162,7 @@ export function compileBundle({ rebuildIcons = true } = {}) {
   }
 
   const bundle = emitNgbBundle(
-    styleRules,
+    allStyleRules,
     numericSignals,
     methods,
     templateAst,

@@ -1,0 +1,13 @@
+.pokemon-card {
+  background: #313131;
+  color: #ffffff;
+  padding: 16px;
+  gap: 8px;
+  border-radius: 12px;
+}
+
+.poke-num {
+  color: #919191;
+  font-size: 14px;
+  font-weight: 800;
+}

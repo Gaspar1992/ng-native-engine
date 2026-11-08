@@ -12,13 +12,15 @@
         <ng-button id="btn" class="suggested-action" (click)="increment()">Siguiente ›</ng-button>
         <ng-button id="btn_reset" (click)="reset()">Inicio (#1)</ng-button>
       </ng-box>
-      <ng-box id="poke_card" class="pokemon-card" orientation="vertical" spacing="8px">
-        <ng-image id="poke_sprite" src="/tmp/ng_native_pokedex/1.png" width="180" height="180" />
-        <ng-label id="poke_num" class="poke-num">N.º 0001</ng-label>
-        <ng-label id="hello" class="hero-title">{{ greeting() }}</ng-label>
+      <app-pokemon-card
+        id="poke_card"
+        name="{{ greeting() }}"
+        number="N.º 0001"
+        sprite="/tmp/ng_native_pokedex/1.png"
+      >
         <ng-box id="types_box" orientation="horizontal" spacing="8px">
-          <ng-label id="poke_type_primary" class="badge-grass">PLANTA</ng-label>
-          <ng-label id="poke_type_secondary" class="badge-poison">VENENO</ng-label>
+          <app-type-badge id="poke_type_primary" class="badge-grass" type="PLANTA" />
+          <app-type-badge id="poke_type_secondary" class="badge-poison" type="VENENO" />
         </ng-box>
         <ng-grid id="specs_grid" class="specs-panel" row-spacing="4px" column-spacing="24px">
           <ng-label id="lbl_h_title" class="spec-label">Altura</ng-label>
@@ -31,7 +33,7 @@
         <ng-level-bar id="atk_bar" value="49" max="255" />
         <ng-level-bar id="def_bar" value="49" max="255" />
         <ng-level-bar id="spd_bar" value="45" max="255" />
-      </ng-box>
+      </app-pokemon-card>
       <ng-separator id="sep" orientation="horizontal" />
       <ng-grid id="controls_grid" row-spacing="8px" column-spacing="12px">
         <ng-switch id="dark_switch" active="true" />

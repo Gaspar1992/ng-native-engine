@@ -15,6 +15,10 @@ function evaluateBoundValue(boundValue, state) {
     return { text: '', signalName: null, templatePattern: '{}' };
   }
 
+  if (ast.value !== undefined) {
+    return { text: String(ast.value), signalName: null, templatePattern: String(ast.value) };
+  }
+
   if (Array.isArray(ast.strings) && Array.isArray(ast.expressions)) {
     let text = '';
     for (let i = 0; i < ast.strings.length; i++) {
@@ -57,7 +61,14 @@ function isBranchActive(branch, state) {
  * resolving static attributes, `[property]` / `{{ interpolation }}` bindings, `(event)` outputs,
  * and `@if` control-flow blocks into the Native Scene Graph IR.
  */
-export function parseTemplateHtml(html, state, numericSignals, templateUrl = 'app.html') {
+export function parseTemplateHtml(
+  html,
+  state,
+  numericSignals,
+  templateUrl = 'app.html',
+  componentRegistry = {},
+  projectedChildren = null,
+) {
   const parsed = parseTemplate(html, templateUrl, {
     preserveWhitespaces: false,
     collectCommentNodes: true,
@@ -69,6 +80,13 @@ export function parseTemplateHtml(html, state, numericSignals, templateUrl = 'ap
     const out = [];
 
     for (const tmplNode of astNodes || []) {
+      if (tmplNode.name === 'ng-content') {
+        if (projectedChildren && projectedChildren.length > 0) {
+          out.push(...projectedChildren);
+        }
+        continue;
+      }
+
       if (Array.isArray(tmplNode.branches)) {
         const firstExpr = tmplNode.branches[0]?.expression?.source?.trim() || 'cond';
         out.push({
@@ -94,6 +112,45 @@ export function parseTemplateHtml(html, state, numericSignals, templateUrl = 'ap
       }
 
       if (typeof tmplNode.name !== 'string') {
+        continue;
+      }
+
+      if (tmplNode.name in componentRegistry) {
+        const compDef = componentRegistry[tmplNode.name];
+        const compState = { ...state };
+        for (const attr of tmplNode.attributes || []) {
+          compState[attr.name] = attr.value;
+        }
+        for (const input of tmplNode.inputs || []) {
+          const evaluated = evaluateBoundValue(input.value, state);
+          compState[input.name] = evaluated.text;
+        }
+
+        const projected = transformNodes(tmplNode.children);
+        const compNodes = parseTemplateHtml(
+          compDef.templateHtml,
+          compState,
+          numericSignals,
+          compDef.templateUrl || `${tmplNode.name}.html`,
+          componentRegistry,
+          projected,
+        );
+
+        const hostId = tmplNode.attributes?.find((a) => a.name === 'id')?.value;
+        const hostClasses =
+          tmplNode.attributes
+            ?.find((a) => a.name === 'class')
+            ?.value?.split(/\s+/)
+            .filter(Boolean) || [];
+
+        if (compNodes.length > 0) {
+          if (hostId) compNodes[0].id = hostId;
+          if (hostClasses.length > 0) {
+            compNodes[0].classes = Array.from(new Set([...compNodes[0].classes, ...hostClasses]));
+          }
+        }
+
+        out.push(...compNodes);
         continue;
       }
 
