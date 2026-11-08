@@ -60,6 +60,8 @@ impl QuickJsEngine {
             ("onAdd", [id, evt, sig, delta]) => format!("on_add {id} {evt} {sig} {delta}"),
             ("onSet", [id, evt, sig, val]) => format!("on_set {id} {evt} {sig} {val}"),
             ("destroyNode", [id]) => format!("destroy {id}"),
+            ("setSystemTheme", [mode]) => format!("theme {mode}"),
+            ("setClipboard", [text]) => format!("clipboard {text}"),
             _ => {
                 return Err(EngineError::ScriptSyntaxError(format!(
                     "Unsupported QuickJS bridge call: {method}"

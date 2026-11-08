@@ -381,4 +381,6 @@ fn phase5_desktop_services_and_native_http_bridge() {
     let win = runtime.resolve_var("win").unwrap();
     let preview = engine.render_window_preview(win).unwrap();
     assert!(preview.contains("Theme:light | Clip:0.5.0 | File:/etc/hostname"));
+    assert_eq!(runtime.desktop().theme().as_str(), "light");
+    assert_eq!(runtime.desktop().clipboard(), "Clip:0.5.0");
 }

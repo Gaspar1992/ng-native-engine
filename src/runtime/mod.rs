@@ -1,8 +1,10 @@
+pub mod bootstrap_js;
 pub mod js_engine;
 pub mod jsc_sys;
 pub mod parser;
 pub mod quickjs_engine;
 
+use crate::desktop::{DesktopServices, DesktopTheme};
 use crate::engine::{EngineError, EventPayload, NodeId, RenderEngine};
 use crate::platforms::PlatformBackend;
 pub use js_engine::{AnyJsEngine, JsEngineBackend, JscEngine, QuickJsEngine};
@@ -30,6 +32,7 @@ enum HandlerAction {
 #[derive(Default)]
 pub struct JsRuntime {
     js_engine: AnyJsEngine,
+    desktop: DesktopServices,
     variables: HashMap<String, NodeId>,
     signals: HashMap<String, i64>,
     bindings: Vec<TextBinding>,
@@ -45,6 +48,7 @@ impl JsRuntime {
     pub fn with_engine(js_engine: AnyJsEngine) -> Self {
         Self {
             js_engine,
+            desktop: DesktopServices::new(),
             variables: HashMap::new(),
             signals: HashMap::new(),
             bindings: Vec::new(),
@@ -58,8 +62,16 @@ impl JsRuntime {
         Ok(Self::with_engine(js_engine))
     }
 
-    pub fn js_engine(&self) -> &AnyJsEngine {
+    pub const fn js_engine(&self) -> &AnyJsEngine {
         &self.js_engine
+    }
+
+    pub const fn desktop(&self) -> &DesktopServices {
+        &self.desktop
+    }
+
+    pub const fn desktop_mut(&mut self) -> &mut DesktopServices {
+        &mut self.desktop
     }
 
     /// Evaluates JavaScript code inside the active `JsEngineBackend` (`JscEngine` or `QuickJsEngine`)
@@ -307,6 +319,14 @@ impl JsRuntime {
                     text,
                 },
             ),
+            Instruction::SetTheme { mode } => {
+                self.desktop.set_theme(DesktopTheme::from_str_lossy(&mode));
+                Ok(())
+            }
+            Instruction::SetClipboard { text } => {
+                self.desktop.set_clipboard(&text);
+                Ok(())
+            }
             other => self.execute_scene_instruction(engine, other, is_hmr, newly_created),
         }
     }

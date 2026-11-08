@@ -74,6 +74,12 @@ pub enum Instruction {
     Destroy {
         var_name: String,
     },
+    SetTheme {
+        mode: String,
+    },
+    SetClipboard {
+        text: String,
+    },
 }
 
 pub fn parse_script(script: &str) -> Result<Vec<Instruction>, EngineError> {
@@ -177,6 +183,12 @@ pub fn parse_instruction(line: &str) -> Result<Instruction, EngineError> {
         }),
         ["destroy", var_name] => Ok(Instruction::Destroy {
             var_name: (*var_name).to_string(),
+        }),
+        ["theme", mode] => Ok(Instruction::SetTheme {
+            mode: (*mode).to_string(),
+        }),
+        ["clipboard", rest @ ..] => Ok(Instruction::SetClipboard {
+            text: normalize_text_payload(rest),
         }),
         _ => Err(EngineError::ScriptSyntaxError(line.to_string())),
     }
