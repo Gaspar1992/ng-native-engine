@@ -96,47 +96,23 @@ pub fn parse_script(script: &str) -> Result<Vec<Instruction>, EngineError> {
 
 pub fn parse_instruction(line: &str) -> Result<Instruction, EngineError> {
     let parts: Vec<&str> = line.split_whitespace().collect();
+    if let Some(reactive) = parse_reactive_instruction(line, &parts) {
+        return reactive;
+    }
     match parts.as_slice() {
-        ["style", class_name, bg, fg, padding_str, spacing_str] => {
-            let rule = parse_style_rule(line, class_name, bg, fg, padding_str, spacing_str)?;
-            Ok(Instruction::RegisterStyle(rule))
-        }
-        ["signal", signal_name, initial_str] => {
-            let initial = parse_i64(line, initial_str)?;
-            Ok(Instruction::DeclareSignal {
-                name: (*signal_name).to_string(),
-                initial,
-            })
-        }
-        ["bind_text", var_name, signal_name, rest @ ..] => Ok(Instruction::BindText {
-            var_name: (*var_name).to_string(),
-            signal_name: (*signal_name).to_string(),
-            template: rest.join(" "),
-        }),
-        ["on_add", var_name, event_name, signal_name, delta_str] => {
-            let delta = parse_i64(line, delta_str)?;
-            Ok(Instruction::OnAdd {
-                var_name: (*var_name).to_string(),
-                event_name: (*event_name).to_string(),
-                signal_name: (*signal_name).to_string(),
-                delta,
-            })
-        }
-        ["on_set", var_name, event_name, signal_name, value_str] => {
-            let value = parse_i64(line, value_str)?;
-            Ok(Instruction::OnSet {
-                var_name: (*var_name).to_string(),
-                event_name: (*event_name).to_string(),
-                signal_name: (*signal_name).to_string(),
-                value,
-            })
-        }
-        ["on_text", var_name, event_name, target_var, rest @ ..] => Ok(Instruction::OnText {
-            var_name: (*var_name).to_string(),
-            event_name: (*event_name).to_string(),
-            target_var: (*target_var).to_string(),
-            text: rest.join(" "),
-        }),
+        [
+            "style",
+            class_name,
+            bg,
+            fg,
+            padding_str,
+            spacing_str,
+            extensions @ ..,
+        ] => parse_style_instruction(
+            line,
+            [class_name, bg, fg, padding_str, spacing_str],
+            extensions,
+        ),
         ["create", var_name, tag] => Ok(Instruction::CreateElement {
             var_name: (*var_name).to_string(),
             tag: (*tag).to_string(),
@@ -212,6 +188,70 @@ fn parse_i64(line: &str, raw: &str) -> Result<i64, EngineError> {
         .map_err(|_| EngineError::ScriptSyntaxError(line.to_string()))
 }
 
+/// Parses reactive opcodes (`signal`, `bind_text`, `on_add`, `on_set`, `on_text`).
+/// Returns `None` when the line is not a reactive instruction.
+fn parse_reactive_instruction(
+    line: &str,
+    parts: &[&str],
+) -> Option<Result<Instruction, EngineError>> {
+    let parsed =
+        match parts {
+            ["signal", signal_name, initial_str] => {
+                parse_i64(line, initial_str).map(|initial| Instruction::DeclareSignal {
+                    name: (*signal_name).to_string(),
+                    initial,
+                })
+            }
+            ["bind_text", var_name, signal_name, rest @ ..] => Ok(Instruction::BindText {
+                var_name: (*var_name).to_string(),
+                signal_name: (*signal_name).to_string(),
+                template: rest.join(" "),
+            }),
+            ["on_add", var_name, event_name, signal_name, delta_str] => parse_i64(line, delta_str)
+                .map(|delta| Instruction::OnAdd {
+                    var_name: (*var_name).to_string(),
+                    event_name: (*event_name).to_string(),
+                    signal_name: (*signal_name).to_string(),
+                    delta,
+                }),
+            ["on_set", var_name, event_name, signal_name, value_str] => parse_i64(line, value_str)
+                .map(|value| Instruction::OnSet {
+                    var_name: (*var_name).to_string(),
+                    event_name: (*event_name).to_string(),
+                    signal_name: (*signal_name).to_string(),
+                    value,
+                }),
+            ["on_text", var_name, event_name, target_var, rest @ ..] => Ok(Instruction::OnText {
+                var_name: (*var_name).to_string(),
+                event_name: (*event_name).to_string(),
+                target_var: (*target_var).to_string(),
+                text: rest.join(" "),
+            }),
+            _ => return None,
+        };
+    Some(parsed)
+}
+
+/// Parses `style <class> <bg> <fg> <padding> <spacing> [key=value ...]`.
+/// Trailing `key=value` extensions (`radius`, `font-size`, `font-weight`) are optional,
+/// so legacy 6-token bundles remain valid.
+fn parse_style_instruction(
+    line: &str,
+    [class_name, bg, fg, padding_str, spacing_str]: [&str; 5],
+    extensions: &[&str],
+) -> Result<Instruction, EngineError> {
+    let mut rule = parse_style_rule(line, class_name, bg, fg, padding_str, spacing_str)?;
+    for ext in extensions {
+        let (key, value) = ext
+            .split_once('=')
+            .ok_or_else(|| EngineError::ScriptSyntaxError(line.to_string()))?;
+        if !rule.apply_extension(key, value) {
+            return Err(EngineError::ScriptSyntaxError(line.to_string()));
+        }
+    }
+    Ok(Instruction::RegisterStyle(rule))
+}
+
 fn parse_style_rule(
     line: &str,
     class_name: &str,
@@ -232,12 +272,37 @@ fn parse_style_rule(
         foreground: (fg != "none").then(|| fg.to_string()),
         padding,
         spacing,
+        ..StyleRule::default()
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_legacy_and_extended_style_instructions() {
+        let legacy = parse_instruction("style card #242424 #ffffff 16 12").unwrap();
+        let Instruction::RegisterStyle(legacy_rule) = legacy else {
+            panic!("expected RegisterStyle");
+        };
+        assert_eq!(legacy_rule.border_radius, None);
+
+        let extended = parse_instruction(
+            "style card #242424 none 16 12 radius=14 font-size=20 font-weight=700",
+        )
+        .unwrap();
+        let Instruction::RegisterStyle(rule) = extended else {
+            panic!("expected RegisterStyle");
+        };
+        assert_eq!(rule.foreground, None);
+        assert_eq!(rule.border_radius, Some(14));
+        assert_eq!(rule.font_size, Some(20));
+        assert_eq!(rule.font_weight, Some(700));
+
+        assert!(parse_instruction("style card none none 0 0 radius").is_err());
+        assert!(parse_instruction("style card none none 0 0 shadow=4").is_err());
+    }
 
     #[test]
     fn parses_phase2_layout_and_anchor_instructions() {

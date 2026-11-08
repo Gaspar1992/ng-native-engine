@@ -37,6 +37,10 @@ fn full_mvp_pipeline_with_headless_backend() {
     );
     assert!(preview.contains("Hola Mundo desde Angular Native!"));
     assert!(preview.contains(".hero-title"));
+    assert!(preview.contains(
+        ".hero-title(bg:transparent, fg:#78aeed, pad:8px, font-size:22px, font-weight:800)"
+    ));
+    assert!(preview.contains(".main-card(bg:#242424, fg:#ffffff, pad:16px, radius:14px)"));
     assert!(preview.contains("[Entry: \"ng-native-dev\"]"));
     assert!(preview.contains("[Switch: ON]"));
     assert!(preview.contains("[x] Enable native JIT"));
@@ -503,4 +507,40 @@ fn phase6_linux_distribution_packager_and_winui_appkit_stateful_backends() {
         appkit_engine.backend().get_view(mac_entry_id).unwrap().text,
         "NativeText"
     );
+}
+
+#[test]
+fn node_based_event_dispatch_resolves_js_handles_through_reverse_index() {
+    let js_bundle = r#"
+        __NG_NATIVE__.createElement("win", "ng-window");
+        __NG_NATIVE__.createElement("entry", "ng-entry");
+        __NG_NATIVE__.createElement("echo", "ng-label");
+        __NG_NATIVE__.appendChild("win", "entry");
+        __NG_NATIVE__.listen("entry", "input", function(evt) {
+            __NG_NATIVE__.setText("echo", "Echo: " + evt.value);
+        });
+    "#;
+
+    let mut engine = RenderEngine::new(HeadlessBackend::new());
+    let mut runtime = JsRuntime::from_engine_config("jsc").unwrap();
+    runtime.eval_js(&mut engine, js_bundle).unwrap();
+
+    let entry = runtime.resolve_var("entry").unwrap();
+    runtime
+        .trigger_node_event_with_payload(
+            &mut engine,
+            entry,
+            "input",
+            &EventPayload::Text(String::from("ReverseIndex")),
+        )
+        .unwrap();
+
+    assert!(engine.backend().frames.iter().flatten().any(|cmd| matches!(
+        cmd,
+        RenderCommand::SetText { text, .. } if text == "Echo: ReverseIndex"
+    )));
+
+    // Destroyed handles must no longer route node-based events to JS listeners.
+    runtime.eval_tick(&mut engine, "destroy entry").unwrap();
+    assert!(runtime.resolve_var("entry").is_err());
 }

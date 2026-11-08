@@ -268,8 +268,18 @@ impl<B: PlatformBackend> RenderEngine<B> {
             if let Some(rule) = self.styles.get_rule_by_name(class_name) {
                 let bg = rule.background.as_deref().unwrap_or("transparent");
                 let fg = rule.foreground.as_deref().unwrap_or("inherit");
+                let mut extras = String::new();
+                if let Some(radius) = rule.border_radius {
+                    let _ = write!(extras, ", radius:{radius}px");
+                }
+                if let Some(size) = rule.font_size {
+                    let _ = write!(extras, ", font-size:{size}px");
+                }
+                if let Some(weight) = rule.font_weight {
+                    let _ = write!(extras, ", font-weight:{weight}");
+                }
                 details.push(format!(
-                    ".{class_name}(bg:{bg}, fg:{fg}, pad:{}px)",
+                    ".{class_name}(bg:{bg}, fg:{fg}, pad:{}px{extras})",
                     rule.padding
                 ));
             } else {

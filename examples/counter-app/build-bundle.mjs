@@ -3,45 +3,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractComponentMetadata } from './ast-metadata-extractor.mjs';
 import { buildMultiResolutionIcons } from './icon-compiler.mjs';
+import { emitStyleInstruction, parseStylesCss } from './style-compiler.mjs';
 import { parseTemplateHtml } from './template-compiler.mjs';
 
-export { extractComponentMetadata, parseTemplateHtml };
+export { extractComponentMetadata, parseStylesCss, parseTemplateHtml };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, '../..');
-
-/**
- * 2. Style Parser (SRP): Parses `app.css` into intermediate Style IR.
- */
-export function parseStylesCss(cssSource) {
-  const ruleRegex = /\.([a-zA-Z0-9_-]+)\s*\{([^}]*)\}/g;
-  const rules = [];
-  let match;
-
-  while ((match = ruleRegex.exec(cssSource)) !== null) {
-    const [, className, body] = match;
-    const props = {
-      className,
-      background: 'none',
-      color: 'none',
-      padding: '0',
-      spacing: '0',
-    };
-
-    for (const rawDecl of body.split(';')) {
-      const [rawKey, rawVal] = rawDecl.split(':').map((s) => s?.trim());
-      if (!rawKey || !rawVal) continue;
-      if (rawKey === 'background') props.background = rawVal;
-      if (rawKey === 'color') props.color = rawVal;
-      if (rawKey === 'padding') props.padding = rawVal;
-      if (rawKey === 'spacing') props.spacing = rawVal;
-    }
-
-    rules.push(props);
-  }
-
-  return rules;
-}
 
 function mapNativeEventName(evtName) {
   if (evtName === 'click') return 'clicked';
@@ -68,9 +36,7 @@ export function emitNgbBundle(
   }
 
   for (const rule of styleRules) {
-    lines.push(
-      `style ${rule.className} ${rule.background} ${rule.color} ${rule.padding} ${rule.spacing}`,
-    );
+    lines.push(emitStyleInstruction(rule));
   }
 
   const appendInstructions = [];

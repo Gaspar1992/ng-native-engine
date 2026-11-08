@@ -160,6 +160,7 @@ mod tests {
                     foreground: Some(String::from("#ffffff")),
                     padding: 8,
                     spacing: 4,
+                    ..StyleRule::default()
                 },
             },
             "AnchorComment",

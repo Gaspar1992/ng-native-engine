@@ -1,13 +1,33 @@
 use super::node::{EngineError, NodeId, StyleId};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct StyleRule {
     pub class_name: String,
     pub background: Option<String>,
     pub foreground: Option<String>,
     pub padding: u16,
     pub spacing: u16,
+    pub border_radius: Option<u16>,
+    pub font_size: Option<u16>,
+    pub font_weight: Option<u16>,
+}
+
+impl StyleRule {
+    /// Applies an optional extended `key=value` declaration (`radius`, `font-size`, `font-weight`).
+    /// Returns `false` when the key is unknown or the value is not a valid unsigned integer.
+    pub fn apply_extension(&mut self, key: &str, raw_value: &str) -> bool {
+        let Ok(value) = raw_value.trim().trim_end_matches("px").parse::<u16>() else {
+            return false;
+        };
+        match key {
+            "radius" | "border-radius" => self.border_radius = Some(value),
+            "font-size" => self.font_size = Some(value),
+            "font-weight" => self.font_weight = Some(value),
+            _ => return false,
+        }
+        true
+    }
 }
 
 /// Game-engine style Resource Manager for UI styles.
@@ -101,6 +121,7 @@ mod tests {
             foreground: None,
             padding: 8,
             spacing: 4,
+            ..StyleRule::default()
         });
         let id2 = reg.register_rule(StyleRule {
             class_name: String::from("card"),
@@ -108,6 +129,7 @@ mod tests {
             foreground: None,
             padding: 16,
             spacing: 8,
+            ..StyleRule::default()
         });
         assert_eq!(id1, id2);
         assert_eq!(reg.get_rule(id1).unwrap().padding, 16);
@@ -121,5 +143,21 @@ mod tests {
 
         reg.remove_node(node);
         assert_eq!(reg.node_classes(node), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn applies_typography_and_radius_extensions_and_rejects_invalid_ones() {
+        let mut rule = StyleRule {
+            class_name: String::from("card"),
+            ..StyleRule::default()
+        };
+        assert!(rule.apply_extension("radius", "12px"));
+        assert!(rule.apply_extension("font-size", "18"));
+        assert!(rule.apply_extension("font-weight", "700"));
+        assert!(!rule.apply_extension("font-weight", "bold"));
+        assert!(!rule.apply_extension("letter-spacing", "2"));
+        assert_eq!(rule.border_radius, Some(12));
+        assert_eq!(rule.font_size, Some(18));
+        assert_eq!(rule.font_weight, Some(700));
     }
 }

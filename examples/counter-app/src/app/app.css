@@ -1,20 +1,24 @@
 .main-card {
   background: #242424;
   color: #ffffff;
-  padding: 16;
-  spacing: 12;
+  padding: 16px;
+  gap: 12px;
+  border-radius: 14px;
 }
 
 .hero-title {
-  background: none;
   color: #78aeed;
-  padding: 8;
-  spacing: 4;
+  padding: 8px;
+  gap: 4px;
+  font-size: 22px;
+  font-weight: 800;
 }
 
 .suggested-action {
   background: #3584e4;
   color: #ffffff;
-  padding: 12;
-  spacing: 8;
+  padding: 12px;
+  gap: 8px;
+  border-radius: 8px;
+  font-weight: bold;
 }

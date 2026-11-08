@@ -1,24 +1,39 @@
 use super::gtk4_sys::{Gtk4Sys, GtkHandle};
 use super::linux_gtk::{GtkLinuxBackend, GtkWidgetType};
-use crate::engine::NodeId;
+use crate::engine::{NodeId, StyleRule};
 use std::fmt::Write as _;
+
+/// Translates a single engine `StyleRule` into a GTK4 CSS class block (pure, unit-testable).
+pub(super) fn render_gtk_css_rule(rule: &StyleRule) -> String {
+    let mut css = String::new();
+    let _ = writeln!(css, ".{} {{", rule.class_name);
+    if let Some(bg) = &rule.background {
+        let _ = writeln!(css, "  background: {bg};");
+    }
+    if let Some(fg) = &rule.foreground {
+        let _ = writeln!(css, "  color: {fg};");
+    }
+    if rule.padding > 0 {
+        let _ = writeln!(css, "  padding: {}px;", rule.padding);
+    }
+    if let Some(radius) = rule.border_radius {
+        let _ = writeln!(css, "  border-radius: {radius}px;");
+    }
+    if let Some(size) = rule.font_size {
+        let _ = writeln!(css, "  font-size: {size}px;");
+    }
+    if let Some(weight) = rule.font_weight {
+        let _ = writeln!(css, "  font-weight: {weight};");
+    }
+    let _ = writeln!(css, "}}");
+    css
+}
 
 impl GtkLinuxBackend {
     pub(super) fn rebuild_css_stylesheet(&self) -> String {
         let mut css = String::from("window { background: #1e1e1e; color: #ffffff; }\n");
         for rule in self.styles.values() {
-            let _ = writeln!(css, ".{} {{", rule.class_name);
-            if let Some(bg) = &rule.background {
-                let _ = writeln!(css, "  background: {bg};");
-            }
-            if let Some(fg) = &rule.foreground {
-                let _ = writeln!(css, "  color: {fg};");
-            }
-            if rule.padding > 0 {
-                let _ = writeln!(css, "  padding: {}px;", rule.padding);
-                let _ = writeln!(css, "  border-radius: 10px;");
-            }
-            let _ = writeln!(css, "}}");
+            css.push_str(&render_gtk_css_rule(rule));
         }
         css
     }
@@ -126,5 +141,38 @@ impl GtkLinuxBackend {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn renders_typography_and_radius_only_when_declared() {
+        let plain = StyleRule {
+            class_name: String::from("plain"),
+            padding: 8,
+            ..StyleRule::default()
+        };
+        let plain_css = render_gtk_css_rule(&plain);
+        assert!(plain_css.contains("padding: 8px;"));
+        assert!(!plain_css.contains("border-radius"));
+
+        let hero = StyleRule {
+            class_name: String::from("hero"),
+            foreground: Some(String::from("#78aeed")),
+            border_radius: Some(12),
+            font_size: Some(22),
+            font_weight: Some(800),
+            ..StyleRule::default()
+        };
+        let hero_css = render_gtk_css_rule(&hero);
+        assert!(hero_css.starts_with(".hero {"));
+        assert!(hero_css.contains("color: #78aeed;"));
+        assert!(hero_css.contains("border-radius: 12px;"));
+        assert!(hero_css.contains("font-size: 22px;"));
+        assert!(hero_css.contains("font-weight: 800;"));
+        assert!(!hero_css.contains("padding"));
     }
 }
