@@ -5,6 +5,11 @@ This project adheres to [Conventional Commits](https://www.conventionalcommits.o
 
 ## [Unreleased]
 
+### Features (Angular 22 Upgrade & Post-Phase 5 Hardening)
+
+- **angular:** upgrade workspace and all `@ng-native/*` packages (`platform`, `forms`, `router`, `http`, `desktop`) to **Angular 22 (`22.2.5`)**, `@angular/build` `22.2.6` (powered by Rust `rolldown` `1.2.16` + `oxc-parser` `0.156.0` + `vite` `8.3.5`), and `typescript` `6.0.3` (removing deprecated `baseUrl` in `tsconfig.json` for TS 6/7 compatibility).
+- **runtime:** synchronize `DesktopServices` directly inside `JsRuntime` (`theme` & `clipboard` opcodes), extract `src/runtime/bootstrap_js.rs`, and extract GTK4 CSS/attribute styling into `src/platforms/gtk4_styling.rs` (`8d4aab9`).
+
 ### Features (Phase 5 — `@ng-native/router`, `@ng-native/http`, & `@ng-native/desktop`)
 
 - **router:** create `@ng-native/router` (`packages/router-native`) implementing DOM-free `NativePlatformLocation` (in-memory URL/state history stack, `pushState`, `replaceState`, `back`, `forward`, `onPopState`) and `provideNativeRouter()`.

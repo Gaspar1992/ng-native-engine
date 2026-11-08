@@ -48,7 +48,8 @@ ng-native-engine/
 │   ├── platforms/                # Concrete OS backend adapters (Bridge + Factory)
 │   │   ├── mod.rs                # PlatformBackend trait & AnyPlatformBackend factory
 │   │   ├── gtk4_callbacks.rs     # Thread-safe GTK4 C signal trampolines & event queue
-│   │   ├── gtk4_sys.rs           # Isolated C FFI dynamic loader for libgtk-4.so.1
+│   ├── gtk4_styling.rs           # GTK4 CSS stylesheet builder & widget attribute dispatcher
+│   ├── gtk4_sys.rs               # Isolated C FFI dynamic loader for libgtk-4.so.1
 │   │   ├── gtk4_widgets.rs       # Safe GTK4 widget, layout & interactive control wrappers
 │   │   ├── linux_gtk.rs          # Native Linux GTK4 + Freedesktop hicolor icon adapter
 │   │   ├── windows_winui.rs      # Windows WinUI 3 adapter
@@ -56,6 +57,7 @@ ng-native-engine/
 │   │   └── headless.rs           # Headless frame recorder for automated CI tests
 │   └── runtime/
 │       ├── mod.rs                # Embedded reactive Signal, HMR & event runtime
+│       ├── bootstrap_js.rs       # Injected globalThis.__NG_NATIVE__ host bridge runtime
 │       ├── js_engine.rs          # Pluggable JsEngineBackend trait & JscEngine adapter
 │       ├── jsc_sys.rs            # Isolated C FFI dynamic loader for libjavascriptcoregtk-6.0.so.1
 │       ├── quickjs_engine.rs     # Portable zero-JIT QuickJsEngine adapter
