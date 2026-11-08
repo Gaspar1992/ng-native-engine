@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::env;
 
+pub mod pokedex;
+pub use pokedex::PokemonInfo;
+
 /// Native system color scheme synchronized with GTK4 (`GtkSettings`) / Libadwaita (`AdwStyleManager`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DesktopTheme {
@@ -174,21 +177,47 @@ impl DesktopServices {
         );
     }
 
-    pub fn execute_http(&mut self, request: NativeHttpRequest) -> NativeHttpResponse {
+    pub fn execute_http(&mut self, request: &NativeHttpRequest) -> NativeHttpResponse {
         let key = format!(
             "{} {}",
             request.method.trim().to_ascii_uppercase(),
             request.url.trim()
         );
-        self.http_history.push(request);
-        self.http_routes
-            .get(&key)
-            .cloned()
-            .unwrap_or_else(|| NativeHttpResponse {
-                status: 404,
-                status_text: String::from("Not Found"),
-                body: String::from(r#"{"error":"Endpoint not registered"}"#),
-            })
+        self.http_history.push(request.clone());
+        if let Some(res) = self.http_routes.get(&key) {
+            return res.clone();
+        }
+
+        // Outbound HTTP call via curl if not intercepted by mock route
+        if request.url.starts_with("http://") || request.url.starts_with("https://") {
+            let mut cmd = std::process::Command::new("curl");
+            cmd.arg("-s")
+                .arg("-L")
+                .arg("-X")
+                .arg(&request.method)
+                .arg(&request.url);
+
+            if let Some(body) = &request.body {
+                cmd.arg("-d").arg(body);
+            }
+
+            if let Ok(output) = cmd.output() {
+                let body = String::from_utf8_lossy(&output.stdout).to_string();
+                let status = if output.status.success() { 200 } else { 500 };
+                let status_text = if status == 200 { "OK" } else { "Error" }.to_string();
+                return NativeHttpResponse {
+                    status,
+                    status_text,
+                    body,
+                };
+            }
+        }
+
+        NativeHttpResponse {
+            status: 404,
+            status_text: String::from("Not Found"),
+            body: String::from(r#"{"error":"Endpoint not registered"}"#),
+        }
     }
 
     pub fn http_history(&self) -> &[NativeHttpRequest] {
@@ -225,7 +254,7 @@ mod tests {
             200,
             r#"{"ok":true}"#,
         );
-        let res = desktop.execute_http(NativeHttpRequest {
+        let res = desktop.execute_http(&NativeHttpRequest {
             method: String::from("GET"),
             url: String::from("https://api.ng-native.dev/status"),
             body: None,

@@ -1,5 +1,5 @@
 use ng_native_engine::config::AngularNativeConfig;
-use ng_native_engine::engine::RenderEngine;
+use ng_native_engine::engine::{NodeId, RenderEngine};
 use ng_native_engine::ipc::{HmrIpcServer, HmrMessage, HmrResponse};
 use ng_native_engine::packager::stage_linux_distribution;
 use ng_native_engine::platforms::AnyPlatformBackend;
@@ -19,7 +19,7 @@ fn handle_hmr_messages(
     server: &mut HmrIpcServer,
     engine: &mut RenderEngine<AnyPlatformBackend>,
     js_runtime: &mut JsRuntime,
-    win_id: ng_native_engine::engine::NodeId,
+    win_id: NodeId,
 ) {
     for (cid, msg) in server.poll_messages() {
         match msg {
@@ -60,12 +60,133 @@ fn ensure_bundle_compiled(bundle_path: &str) -> String {
     })
 }
 
+fn update_pokedex_ui(
+    engine: &mut RenderEngine<AnyPlatformBackend>,
+    hello_id: Option<NodeId>,
+    lbl_id: Option<NodeId>,
+    poke: &ng_native_engine::desktop::PokemonInfo,
+) {
+    if let Some(h_id) = hello_id {
+        let _ = engine.set_text(
+            h_id,
+            format!(
+                "#{:03} {}  [{}]",
+                poke.id,
+                poke.display_name().to_uppercase(),
+                poke.primary_type.to_uppercase()
+            ),
+        );
+    }
+    if let Some(l_id) = lbl_id {
+        let _ = engine.set_text(
+            l_id,
+            format!(
+                "HP: {} | ATK: {} | DEF: {} | SPD: {}",
+                poke.hp, poke.attack, poke.defense, poke.speed
+            ),
+        );
+    }
+}
+
+struct InteractiveContext<'a> {
+    cfg: &'a AngularNativeConfig,
+    bundle_path: &'a str,
+    last_mtime: Option<SystemTime>,
+    win_id: NodeId,
+}
+
+fn run_interactive_loop(
+    mut ctx: InteractiveContext<'_>,
+    mut engine: RenderEngine<AnyPlatformBackend>,
+    mut js_runtime: JsRuntime,
+    mut hmr_server: Option<HmrIpcServer>,
+) {
+    println!(
+        "\n[GTK4 Native Window Active] Opened native Linux window '{}'. Watching '{}' for Hot Reload...",
+        ctx.cfg.project_name, ctx.bundle_path
+    );
+    let mut last_pokedex_id: Option<i64> = None;
+    let hello_id = js_runtime.resolve_var("hello").ok();
+    let lbl_id = js_runtime.resolve_var("lbl").ok();
+
+    while engine.backend().open_window_count() > 0 {
+        let native_events = engine.backend().step_native_events(false);
+        for ev in native_events {
+            if let ng_native_engine::engine::EventPayload::Text(ref query) = ev.payload {
+                let clean = query.trim();
+                if !clean.is_empty()
+                    && clean != "ng-native-dev"
+                    && let Ok(poke) = js_runtime.desktop_mut().fetch_pokemon(clean)
+                {
+                    println!(
+                        "\n[PokéAPI] Searched '{}' -> #{:03} {} ({})",
+                        clean,
+                        poke.id,
+                        poke.display_name(),
+                        poke.primary_type
+                    );
+                    update_pokedex_ui(&mut engine, hello_id, lbl_id, &poke);
+                    last_pokedex_id = Some(i64::from(poke.id));
+                }
+            }
+
+            js_runtime
+                .trigger_node_event_with_payload(&mut engine, ev.node, &ev.event_name, &ev.payload)
+                .unwrap();
+        }
+
+        let current_count = js_runtime.signal_value("count").unwrap_or(0);
+        if Some(current_count) != last_pokedex_id && current_count > 0 {
+            if let Ok(poke) = js_runtime
+                .desktop_mut()
+                .fetch_pokemon(&current_count.to_string())
+            {
+                println!(
+                    "\n[PokéAPI] Navigated -> #{:03} {} ({})",
+                    poke.id,
+                    poke.display_name(),
+                    poke.primary_type
+                );
+                update_pokedex_ui(&mut engine, hello_id, lbl_id, &poke);
+            }
+            last_pokedex_id = Some(current_count);
+        }
+
+        if let Some(ref mut server) = hmr_server {
+            handle_hmr_messages(server, &mut engine, &mut js_runtime, ctx.win_id);
+        }
+
+        let current_mtime = bundle_modified_time(ctx.bundle_path);
+        if current_mtime.is_some()
+            && current_mtime != ctx.last_mtime
+            && let Ok(updated_script) = fs::read_to_string(ctx.bundle_path)
+            && !updated_script.trim().is_empty()
+        {
+            ctx.last_mtime = current_mtime;
+            if let Err(err) = js_runtime.hot_reload(&mut engine, &updated_script) {
+                eprintln!("[Hot Reload Error] Failed to apply bundle update: {err:?}");
+            } else {
+                println!(
+                    "\n[Hot Reload] Applied live update from '{}' (signals preserved):",
+                    ctx.bundle_path
+                );
+                println!("{}", engine.render_window_preview(ctx.win_id).unwrap());
+            }
+        }
+
+        thread::sleep(Duration::from_millis(16));
+    }
+
+    println!("\n--- Scene Graph Snapshot ---");
+    engine.print_tree(ctx.win_id, 0).unwrap();
+}
+
 fn main() {
     // 1. Read `angular.json` to configure the project & target platform
     let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
     let bundle_path = format!("{}/main.ngb", cfg.output_path);
     let bootstrap_script = ensure_bundle_compiled(&bundle_path);
-    let mut last_mtime = bundle_modified_time(&bundle_path);
+    let last_mtime = bundle_modified_time(&bundle_path);
 
     println!(
         "Loaded angular.json -> project='{}', platform='{}', bundle='{}'\n",
@@ -102,52 +223,23 @@ fn main() {
     println!("{}", engine.render_window_preview(win_id).unwrap());
 
     let hmr_socket = format!("{}/hmr.sock", cfg.output_path);
-    let mut hmr_server = HmrIpcServer::bind(&hmr_socket).ok();
+    let hmr_server = HmrIpcServer::bind(&hmr_socket).ok();
     if hmr_server.is_some() {
         println!("[HMR IPC] Socket server active -> '{hmr_socket}'");
     }
 
     if engine.backend().is_native_display_active() && env::var("NG_NATIVE_BATCH").is_err() {
-        println!(
-            "\n[GTK4 Native Window Active] Opened native Linux window '{}'. Watching '{}' for Hot Reload...",
-            cfg.project_name, bundle_path
+        run_interactive_loop(
+            InteractiveContext {
+                cfg: &cfg,
+                bundle_path: &bundle_path,
+                last_mtime,
+                win_id,
+            },
+            engine,
+            js_runtime,
+            hmr_server,
         );
-        while engine.backend().open_window_count() > 0 {
-            let native_events = engine.backend().step_native_events(false);
-            for ev in native_events {
-                js_runtime
-                    .trigger_node_event_with_payload(
-                        &mut engine,
-                        ev.node,
-                        &ev.event_name,
-                        &ev.payload,
-                    )
-                    .unwrap();
-            }
-
-            if let Some(ref mut server) = hmr_server {
-                handle_hmr_messages(server, &mut engine, &mut js_runtime, win_id);
-            }
-
-            let current_mtime = bundle_modified_time(&bundle_path);
-            if current_mtime.is_some()
-                && current_mtime != last_mtime
-                && let Ok(updated_script) = fs::read_to_string(&bundle_path)
-                && !updated_script.trim().is_empty()
-            {
-                last_mtime = current_mtime;
-                if let Err(err) = js_runtime.hot_reload(&mut engine, &updated_script) {
-                    eprintln!("[Hot Reload Error] Failed to apply bundle update: {err:?}");
-                } else {
-                    println!(
-                        "\n[Hot Reload] Applied live update from '{bundle_path}' (signals preserved):"
-                    );
-                    println!("{}", engine.render_window_preview(win_id).unwrap());
-                }
-            }
-
-            thread::sleep(Duration::from_millis(16));
-        }
     } else {
         // Pump non-blocking GTK4 events if available and run declarative click simulation
         let _ = engine.backend().step_event_loop(false);
@@ -155,8 +247,7 @@ fn main() {
         js_runtime
             .trigger_event(&mut engine, "btn", "clicked")
             .unwrap();
+        println!("\n--- Scene Graph Snapshot ---");
+        engine.print_tree(win_id, 0).unwrap();
     }
-
-    println!("\n--- Scene Graph Snapshot ---");
-    engine.print_tree(win_id, 0).unwrap();
 }

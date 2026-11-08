@@ -5,13 +5,17 @@
       <ng-label id="hello" class="hero-title">{{ greeting() }}</ng-label>
       <ng-label id="lbl">Count: {{ count() }}</ng-label>
       <ng-box id="actions" orientation="horizontal" spacing="8px">
-        <ng-button id="btn" class="suggested-action" (click)="increment()">Increment</ng-button>
-        <ng-button id="btn_dec" (click)="decrement()">Decrement</ng-button>
-        <ng-button id="btn_reset" (click)="reset()">Reset</ng-button>
+        <ng-button id="btn" class="suggested-action" (click)="increment()">Next (#+1)</ng-button>
+        <ng-button id="btn_dec" (click)="decrement()">Prev (#-1)</ng-button>
+        <ng-button id="btn_reset" (click)="reset()">Reset (#1)</ng-button>
       </ng-box>
       <ng-separator id="sep" orientation="horizontal" />
       <ng-grid id="controls_grid" row-spacing="8px" column-spacing="12px">
-        <ng-entry id="profile_entry" placeholder="Developer handle..." value="{{ author() }}" />
+        <ng-entry
+          id="profile_entry"
+          placeholder="Search Pokémon (e.g. pikachu, charizard)..."
+          value="{{ author() }}"
+        />
         <ng-switch id="dark_switch" active="true" />
         <ng-checkbox id="telemetry_chk" active="true">Enable native JIT</ng-checkbox>
         <ng-slider id="fps_slider" min="30" max="144" value="60" />
