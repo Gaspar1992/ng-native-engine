@@ -19,6 +19,8 @@ describe('App', () => {
     const app = fixture.componentInstance;
 
     expect(app['windowTitle']()).toBe('NgNative - Hola Mundo');
+    expect(app['subtitle']()).toBe('Angular 22 + GTK4 / Libadwaita');
+    expect(app['author']()).toBe('ng-native-dev');
     expect(app['count']()).toBe(0);
 
     app.increment();

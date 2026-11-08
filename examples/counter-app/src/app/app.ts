@@ -9,7 +9,9 @@ import { Component, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
 })
 export class App {
   protected readonly windowTitle = signal('NgNative - Hola Mundo');
+  protected readonly subtitle = signal('Angular 22 + GTK4 / Libadwaita');
   protected readonly greeting = signal('Hola Mundo desde Angular Native! 2');
+  protected readonly author = signal('ng-native-dev');
   protected readonly count = signal(0);
 
   increment(): void {

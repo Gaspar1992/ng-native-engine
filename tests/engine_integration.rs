@@ -22,7 +22,7 @@ fn full_mvp_pipeline_with_headless_backend() {
     // Tick 1: Mount Angular component (signals + styles + template + icon + declarative events)
     runtime.eval_tick(&mut engine, &script).unwrap();
     assert_eq!(engine.backend().frames.len(), 1);
-    assert_eq!(engine.backend().frames[0].len(), 20);
+    assert_eq!(engine.backend().frames[0].len(), 66);
 
     let win = runtime.resolve_var("win").unwrap();
     let hello = runtime.resolve_var("hello").unwrap();
@@ -32,8 +32,16 @@ fn full_mvp_pipeline_with_headless_backend() {
     let preview = engine.render_window_preview(win).unwrap();
     assert!(preview.contains("NgNative - Hola Mundo"));
     assert!(preview.contains("[ICO:16x16, 32x32, 48x48]"));
+    assert!(
+        preview.contains("[HeaderBar: NgNative - Hola Mundo — Angular 22 + GTK4 / Libadwaita]")
+    );
     assert!(preview.contains("Hola Mundo desde Angular Native!"));
     assert!(preview.contains(".hero-title"));
+    assert!(preview.contains("[Entry: \"ng-native-dev\"]"));
+    assert!(preview.contains("[Switch: ON]"));
+    assert!(preview.contains("[x] Enable native JIT"));
+    assert!(preview.contains("[Slider: 60 (30..144)]"));
+    assert!(preview.contains("[Select: \"Linux GTK4\" (0)]"));
 
     assert!(engine.backend().frames[0].iter().any(|cmd| matches!(
         cmd,
@@ -64,6 +72,30 @@ fn full_mvp_pipeline_with_headless_backend() {
         vec![RenderCommand::SetText {
             id: lbl,
             text: String::from("Count: 2"),
+        }]
+    );
+
+    // Tick 4: Decrement button `(click)="decrement()"` -> `Count: 1`
+    runtime
+        .trigger_event(&mut engine, "btn_dec", "clicked")
+        .unwrap();
+    assert_eq!(
+        engine.backend().frames[3],
+        vec![RenderCommand::SetText {
+            id: lbl,
+            text: String::from("Count: 1"),
+        }]
+    );
+
+    // Tick 5: Reset button `(click)="reset()"` -> `Count: 0`
+    runtime
+        .trigger_event(&mut engine, "btn_reset", "clicked")
+        .unwrap();
+    assert_eq!(
+        engine.backend().frames[4],
+        vec![RenderCommand::SetText {
+            id: lbl,
+            text: String::from("Count: 0"),
         }]
     );
 

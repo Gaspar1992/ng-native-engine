@@ -3,8 +3,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractComponentMetadata } from './ast-metadata-extractor.mjs';
 import { buildMultiResolutionIcons } from './icon-compiler.mjs';
+import { parseTemplateHtml } from './template-compiler.mjs';
 
-export { extractComponentMetadata };
+export { extractComponentMetadata, parseTemplateHtml };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(__dirname, '../..');
@@ -40,123 +41,6 @@ export function parseStylesCss(cssSource) {
   }
 
   return rules;
-}
-
-/**
- * Resolves Angular `{{ signal() }}` and `{{ prop }}` expressions against component state.
- */
-function interpolate(text, state) {
-  return text.replace(/\{\{\s*([a-zA-Z_]\w*)(?:\(\))?\s*\}\}/g, (_, key) =>
-    key in state ? String(state[key]) : '',
-  );
-}
-
-/**
- * 3. Template Parser (SRP): Parses `app.html` into a hierarchical AST including reactive bindings & events.
- */
-export function parseTemplateHtml(html, state, numericSignals) {
-  const tokenRegex = /<!--([\s\S]*?)-->|<\/?([a-zA-Z0-9-]+)([^>]*)>|([^<]+)/g;
-  const rootNodes = [];
-  const stack = [];
-  let autoIdCounter = 1;
-  let match;
-
-  while ((match = tokenRegex.exec(html)) !== null) {
-    const [fullToken, commentBody, tagName, attrString, textNode] = match;
-
-    if (commentBody !== undefined) {
-      const commentNode = {
-        id: `anchor_${autoIdCounter++}`,
-        tag: '#comment',
-        isComment: true,
-        text: commentBody.trim() || 'anchor',
-        title: null,
-        classes: [],
-        attributes: {},
-        reactiveBinding: null,
-        events: {},
-        children: [],
-      };
-      if (stack.length === 0) {
-        rootNodes.push(commentNode);
-      } else {
-        stack[stack.length - 1].children.push(commentNode);
-      }
-      continue;
-    }
-
-    if (textNode !== undefined) {
-      const rawTrimmed = textNode.trim();
-      const cleaned = interpolate(rawTrimmed, state);
-      if (cleaned && stack.length > 0) {
-        const current = stack[stack.length - 1];
-        current.text = cleaned;
-
-        const exprMatch = rawTrimmed.match(/\{\{\s*([a-zA-Z_]\w*)(?:\(\))?\s*\}\}/);
-        if (exprMatch && exprMatch[1] in numericSignals) {
-          current.reactiveBinding = {
-            signalName: exprMatch[1],
-            template: rawTrimmed.replace(/\{\{\s*([a-zA-Z_]\w*)(?:\(\))?\s*\}\}/, '{}'),
-          };
-        }
-      }
-      continue;
-    }
-
-    const isClosing = fullToken.startsWith('</');
-    const isSelfClosing = fullToken.endsWith('/>');
-
-    if (isClosing) {
-      stack.pop();
-      continue;
-    }
-
-    const attrs = {};
-    const events = {};
-    const attrRegex = /(\(?[a-zA-Z0-9_-]+\)?)\s*=\s*"([^"]*)"/g;
-    let attrMatch;
-    while ((attrMatch = attrRegex.exec(attrString)) !== null) {
-      const [, rawName, rawVal] = attrMatch;
-      if (rawName.startsWith('(') && rawName.endsWith(')')) {
-        const evtName = rawName.slice(1, -1);
-        const handlerCall = rawVal.replace(/\(\)\s*$/, '').trim();
-        events[evtName] = handlerCall;
-      } else {
-        attrs[rawName] = interpolate(rawVal, state);
-      }
-    }
-
-    const customAttrs = {};
-    for (const [k, v] of Object.entries(attrs)) {
-      if (k !== 'id' && k !== 'title' && k !== 'class') {
-        customAttrs[k] = v;
-      }
-    }
-
-    const node = {
-      id: attrs.id || `node_${autoIdCounter++}`,
-      tag: tagName,
-      title: attrs.title || null,
-      classes: attrs.class ? attrs.class.split(/\s+/).filter(Boolean) : [],
-      attributes: customAttrs,
-      text: null,
-      reactiveBinding: null,
-      events,
-      children: [],
-    };
-
-    if (stack.length === 0) {
-      rootNodes.push(node);
-    } else {
-      stack[stack.length - 1].children.push(node);
-    }
-
-    if (!isSelfClosing) {
-      stack.push(node);
-    }
-  }
-
-  return rootNodes;
 }
 
 function mapNativeEventName(evtName) {

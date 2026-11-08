@@ -6,6 +6,7 @@ pub mod node;
 pub mod preview;
 pub mod styles;
 pub mod widget;
+pub mod widget_attrs;
 
 use crate::platforms::PlatformBackend;
 use arena::Arena;

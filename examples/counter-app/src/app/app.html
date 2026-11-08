@@ -1,7 +1,26 @@
 <ng-window id="win" title="{{ windowTitle() }}">
-  <ng-box id="vbox" class="main-card">
-    <ng-label id="hello" class="hero-title">{{ greeting() }}</ng-label>
-    <ng-label id="lbl">Count: {{ count() }}</ng-label>
-    <ng-button id="btn" class="suggested-action" (click)="increment()">Increment</ng-button>
-  </ng-box>
+  <ng-header-bar id="hdr" subtitle="{{ subtitle() }}">{{ windowTitle() }}</ng-header-bar>
+  <ng-scroll id="scroll" min-height="360px">
+    <ng-box id="vbox" class="main-card" orientation="vertical" spacing="12px">
+      <ng-label id="hello" class="hero-title">{{ greeting() }}</ng-label>
+      <ng-label id="lbl">Count: {{ count() }}</ng-label>
+      <ng-box id="actions" orientation="horizontal" spacing="8px">
+        <ng-button id="btn" class="suggested-action" (click)="increment()">Increment</ng-button>
+        <ng-button id="btn_dec" (click)="decrement()">Decrement</ng-button>
+        <ng-button id="btn_reset" (click)="reset()">Reset</ng-button>
+      </ng-box>
+      <ng-separator id="sep" orientation="horizontal" />
+      <ng-grid id="controls_grid" row-spacing="8px" column-spacing="12px">
+        <ng-entry id="profile_entry" placeholder="Developer handle..." value="{{ author() }}" />
+        <ng-switch id="dark_switch" active="true" />
+        <ng-checkbox id="telemetry_chk" active="true">Enable native JIT</ng-checkbox>
+        <ng-slider id="fps_slider" min="30" max="144" value="60" />
+        <ng-select
+          id="backend_select"
+          options="Linux GTK4,Windows WinUI 3,macOS AppKit"
+          selected="0"
+        />
+      </ng-grid>
+    </ng-box>
+  </ng-scroll>
 </ng-window>
