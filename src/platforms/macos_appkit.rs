@@ -28,6 +28,11 @@ impl PlatformBackend for MacOsAppKitBackend {
             "ng-separator" | "gtk-separator" => "NSBoxSeparator",
             "ng-label" | "gtk-label" => "NSTextField",
             "ng-button" | "gtk-button" => "NSButton",
+            "ng-entry" | "gtk-entry" => "NSTextFieldEditable",
+            "ng-switch" | "gtk-switch" => "NSSwitch",
+            "ng-checkbox" | "ng-check" | "gtk-check-button" => "NSButtonCheckbox",
+            "ng-slider" | "ng-scale" | "gtk-scale" => "NSSlider",
+            "ng-select" | "ng-dropdown" | "gtk-drop-down" => "NSPopUpButton",
             _ => "NSView",
         }
     }

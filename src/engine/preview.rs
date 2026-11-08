@@ -77,6 +77,27 @@ impl<B: PlatformBackend> RenderEngine<B> {
             WidgetKind::Label { text } => {
                 format!("[Label #{idx}:{generation} text=\"{text}\"{class_str}]")
             }
+            WidgetKind::Entry { text, placeholder } => {
+                format!(
+                    "[Entry #{idx}:{generation} text=\"{text}\" placeholder=\"{placeholder}\"{class_str}]"
+                )
+            }
+            WidgetKind::Switch { active } => {
+                format!("[Switch #{idx}:{generation} active={active}{class_str}]")
+            }
+            WidgetKind::CheckButton { label, active } => {
+                format!(
+                    "[CheckButton #{idx}:{generation} label=\"{label}\" active={active}{class_str}]"
+                )
+            }
+            WidgetKind::Slider { value, min, max } => {
+                format!("[Slider #{idx}:{generation} value={value} range={min}..{max}{class_str}]")
+            }
+            WidgetKind::DropDown { options, selected } => {
+                format!(
+                    "[DropDown #{idx}:{generation} selected={selected} options={options:?}{class_str}]"
+                )
+            }
             WidgetKind::Anchor { comment } => {
                 format!("[Anchor #{idx}:{generation} comment=\"{comment}\"]")
             }
@@ -95,6 +116,11 @@ impl<B: PlatformBackend> RenderEngine<B> {
             WidgetKind::Separator { .. }
             | WidgetKind::Button { .. }
             | WidgetKind::Label { .. }
+            | WidgetKind::Entry { .. }
+            | WidgetKind::Switch { .. }
+            | WidgetKind::CheckButton { .. }
+            | WidgetKind::Slider { .. }
+            | WidgetKind::DropDown { .. }
             | WidgetKind::Anchor { .. } => Vec::new(),
         }
     }
@@ -207,6 +233,25 @@ impl<B: PlatformBackend> RenderEngine<B> {
             } else {
                 format!("  [ {label} ]  {style_summary}")
             }),
+            WidgetKind::Entry { text, placeholder } => {
+                let display = if text.is_empty() { placeholder } else { text };
+                Some(format!("  [Entry: \"{display}\"]"))
+            }
+            WidgetKind::Switch { active } => {
+                let state = if *active { "ON" } else { "OFF" };
+                Some(format!("  [Switch: {state}]"))
+            }
+            WidgetKind::CheckButton { label, active } => {
+                let mark = if *active { "x" } else { " " };
+                Some(format!("  [{mark}] {label}"))
+            }
+            WidgetKind::Slider { value, min, max } => {
+                Some(format!("  [Slider: {value} ({min}..{max})]"))
+            }
+            WidgetKind::DropDown { options, selected } => {
+                let current = options.get(*selected).map_or("", String::as_str);
+                Some(format!("  [Select: \"{current}\" ({selected})]"))
+            }
             WidgetKind::Window { .. } | WidgetKind::Scroll { .. } | WidgetKind::Anchor { .. } => {
                 None
             }

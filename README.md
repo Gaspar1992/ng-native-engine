@@ -46,6 +46,7 @@ ng-native-engine/
 │   ├── platforms/                # Concrete OS backend adapters (Bridge + Factory)
 │   │   ├── mod.rs                # PlatformBackend trait & AnyPlatformBackend factory
 │   │   ├── gtk4_sys.rs           # Isolated C FFI dynamic loader for libgtk-4.so.1
+│   │   ├── gtk4_widgets.rs       # Safe GTK4 widget, layout & interactive control wrappers
 │   │   ├── linux_gtk.rs          # Native Linux GTK4 + Freedesktop hicolor icon adapter
 │   │   ├── windows_winui.rs      # Windows WinUI 3 adapter
 │   │   ├── macos_appkit.rs       # macOS AppKit (Cocoa) adapter
@@ -56,8 +57,10 @@ ng-native-engine/
 │       ├── jsc_sys.rs            # Isolated C FFI dynamic loader for libjavascriptcoregtk-6.0.so.1
 │       └── parser.rs             # Bytecode (.ngb) instruction IR & syntax parser
 ├── packages/
-│   └── platform-native/          # @ng-native/platform custom Angular 21 Renderer2 package
-│       └── src/                  # NativeRenderer2, NativeRendererFactory2 & bootstrapNativeApplication
+│   ├── platform-native/          # @ng-native/platform custom Angular 21 Renderer2 package
+│   │   └── src/                  # NativeRenderer2, NativeRendererFactory2 & bootstrapNativeApplication
+│   └── forms-native/             # @ng-native/forms ControlValueAccessor directives (<ng-entry>, <ng-switch>, ...)
+│       └── src/                  # NativeTextValueAccessor, NativeBooleanValueAccessor & NativeNumberValueAccessor
 ├── examples/
 │   └── counter-app/              # Official Angular 21 application workspace
 │       ├── build-bundle.mjs      # Template, CSS, Signal & multi-DPI icon compiler (--watch capable)

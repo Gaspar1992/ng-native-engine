@@ -193,7 +193,7 @@ impl JsEngineBackend for JscEngine {
             let payload_js = match payload {
                 EventPayload::None => String::from("{}"),
                 EventPayload::Text(t) => format!("{{ value: {t:?} }}"),
-                EventPayload::Bool(b) => format!("{{ value: {b}, active: {b} }}"),
+                EventPayload::Bool(b) => format!("{{ value: {b}, active: {b}, checked: {b} }}"),
                 EventPayload::Int(n) => format!("{{ value: {n} }}"),
             };
             let call = format!(

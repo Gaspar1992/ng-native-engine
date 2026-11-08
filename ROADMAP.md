@@ -87,19 +87,19 @@ When `@angular/platform-browser` is removed, Angular's Ivy runtime still require
   - [x] Support Angular `@if`, `@for`, `@switch`, and `@defer` blocks using `insert_before` and comment/anchor nodes.
   - [x] Provide `provideNativePlatform()` and `bootstrapNativeApplication()`.
 
-### Phase 4: Interactive Controls & `@angular/forms` Compatibility (Next Up 🚧)
+### Phase 4: Interactive Controls & `@angular/forms` Compatibility (Completed ✅)
 
-- [ ] **Native Input Widgets in `GtkLinuxBackend`:**
-  - [ ] `<ng-entry>` (`GtkEntry` with `changed` / `notify::text` signals)
-  - [ ] `<ng-switch>` (`GtkSwitch` with `state-set` / `notify::active` signals)
-  - [ ] `<ng-checkbox>` (`GtkCheckButton` with `toggled` signal)
-  - [ ] `<ng-slider>` (`GtkScale` with `value-changed` signal)
-  - [ ] `<ng-select>` (`GtkDropDown` with `notify::selected` signal)
-- [ ] **`@ng-native/forms` ControlValueAccessors:**
-  - [ ] Implement `DefaultValueAccessor`, `CheckboxControlValueAccessor`, and `NumberValueAccessor` for native widgets.
-  - [ ] Full compatibility with `FormsModule` (`[(ngModel)]`), `ReactiveFormsModule` (`formControl`, `formGroup`, `Validators`), and Angular Signal Forms.
+- [x] **Native Input Widgets in `GtkLinuxBackend`:**
+  - [x] `<ng-entry>` (`GtkEntry` with `changed` / `notify::text` signals)
+  - [x] `<ng-switch>` (`GtkSwitch` with `state-set` / `notify::active` signals)
+  - [x] `<ng-checkbox>` (`GtkCheckButton` with `toggled` signal)
+  - [x] `<ng-slider>` (`GtkScale` with `value-changed` signal)
+  - [x] `<ng-select>` (`GtkDropDown` with `notify::selected` signal)
+- [x] **`@ng-native/forms` ControlValueAccessors (`packages/forms-native`):**
+  - [x] Implement `NativeTextValueAccessor`, `NativeBooleanValueAccessor`, and `NativeNumberValueAccessor` for native widgets.
+  - [x] Full compatibility with `FormsModule` (`[(ngModel)]`), `ReactiveFormsModule` (`formControl`, `formGroup`, `Validators`), and Angular Signal Forms.
 
-### Phase 5: `@angular/router`, `@angular/common/http`, & Desktop OS APIs
+### Phase 5: `@angular/router`, `@angular/common/http`, & Desktop OS APIs (Next Up 🚧)
 
 - [ ] **`@ng-native/router` (`NativePlatformLocation`):**
   - [ ] Support `<router-outlet>`, `routerLink`, route guards, resolvers, and lazy loading without `window.location`.

@@ -36,6 +36,11 @@ enum GtkWidgetType {
     Separator,
     Label,
     Button,
+    Entry,
+    Switch,
+    CheckButton,
+    Slider,
+    DropDown,
     Anchor,
 }
 
@@ -143,6 +148,8 @@ impl GtkLinuxBackend {
                     GtkWidgetType::Window => gtk.set_window_title(handle, text),
                     GtkWidgetType::Label => gtk.set_label_text(handle, text),
                     GtkWidgetType::Button => gtk.set_button_label(handle, text),
+                    GtkWidgetType::Entry => gtk.set_entry_text(handle, text),
+                    GtkWidgetType::CheckButton => gtk.set_check_button_label(handle, text),
                     _ => {}
                 }
             }
@@ -214,6 +221,17 @@ impl GtkLinuxBackend {
                 let packed = (id.index << 32) | (id.generation as usize);
                 gtk.connect_clicked(btn, on_gtk_button_clicked, packed);
                 (Some(btn), GtkWidgetType::Button)
+            }
+            "ng-entry" | "gtk-entry" => (Some(gtk.create_entry()), GtkWidgetType::Entry),
+            "ng-switch" | "gtk-switch" => (Some(gtk.create_switch()), GtkWidgetType::Switch),
+            "ng-checkbox" | "ng-check" | "gtk-check-button" => {
+                (Some(gtk.create_check_button()), GtkWidgetType::CheckButton)
+            }
+            "ng-slider" | "ng-scale" | "gtk-scale" => {
+                (Some(gtk.create_slider()), GtkWidgetType::Slider)
+            }
+            "ng-select" | "ng-dropdown" | "gtk-drop-down" => {
+                (Some(gtk.create_drop_down()), GtkWidgetType::DropDown)
             }
             "ng-anchor" | "#comment" => (None, GtkWidgetType::Anchor),
             _ => return,
@@ -289,6 +307,37 @@ impl GtkLinuxBackend {
             "margin-top" | "margin-bottom" | "margin-start" | "margin-end" => {
                 if let Some(px) = Self::parse_px_i32(value) {
                     gtk.set_margin_side(handle, key, px);
+                }
+            }
+            _ => Self::apply_interactive_attribute(gtk, widget.kind, handle, key, value),
+        }
+    }
+
+    fn apply_interactive_attribute(
+        gtk: &Gtk4Sys,
+        kind: GtkWidgetType,
+        handle: GtkHandle,
+        key: &str,
+        value: &str,
+    ) {
+        match (kind, key) {
+            (GtkWidgetType::Entry, "value" | "text") => gtk.set_entry_text(handle, value),
+            (GtkWidgetType::Entry, "placeholder") => gtk.set_entry_placeholder(handle, value),
+            (GtkWidgetType::Switch, "active" | "checked" | "value") => {
+                gtk.set_switch_active(handle, value == "true" || value == "1");
+            }
+            (GtkWidgetType::CheckButton, "active" | "checked" | "value") => {
+                gtk.set_check_button_active(handle, value == "true" || value == "1");
+            }
+            (GtkWidgetType::CheckButton, "label") => gtk.set_check_button_label(handle, value),
+            (GtkWidgetType::Slider, "value") => {
+                if let Ok(v) = value.trim().parse::<f64>() {
+                    gtk.set_slider_value(handle, v);
+                }
+            }
+            (GtkWidgetType::DropDown, "selected" | "value") => {
+                if let Ok(idx) = value.trim().parse::<u32>() {
+                    gtk.set_drop_down_selected(handle, idx);
                 }
             }
             _ => {}
@@ -410,6 +459,11 @@ impl PlatformBackend for GtkLinuxBackend {
             "ng-separator" | "gtk-separator" => "GtkSeparator",
             "ng-label" | "gtk-label" => "GtkLabel",
             "ng-button" | "gtk-button" => "GtkButton",
+            "ng-entry" | "gtk-entry" => "GtkEntry",
+            "ng-switch" | "gtk-switch" => "GtkSwitch",
+            "ng-checkbox" | "ng-check" | "gtk-check-button" => "GtkCheckButton",
+            "ng-slider" | "ng-scale" | "gtk-scale" => "GtkScale",
+            "ng-select" | "ng-dropdown" | "gtk-drop-down" => "GtkDropDown",
             "ng-anchor" | "#comment" => "GtkAnchorComment",
             _ => "GtkWidget",
         }

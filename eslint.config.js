@@ -36,6 +36,12 @@ export default [
     },
   },
   {
+    files: ['packages/**/*.ts'],
+    rules: {
+      '@angular-eslint/directive-selector': 'off',
+    },
+  },
+  {
     files: ['**/*.html'],
     languageOptions: {
       parser: angularTemplateParser,

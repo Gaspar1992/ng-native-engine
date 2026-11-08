@@ -30,6 +30,13 @@ impl PlatformBackend for WinUiBackend {
             "ng-separator" | "gtk-separator" => "Microsoft.UI.Xaml.Controls.AppBarSeparator",
             "ng-label" | "gtk-label" => "Microsoft.UI.Xaml.Controls.TextBlock",
             "ng-button" | "gtk-button" => "Microsoft.UI.Xaml.Controls.Button",
+            "ng-entry" | "gtk-entry" => "Microsoft.UI.Xaml.Controls.TextBox",
+            "ng-switch" | "gtk-switch" => "Microsoft.UI.Xaml.Controls.ToggleSwitch",
+            "ng-checkbox" | "ng-check" | "gtk-check-button" => {
+                "Microsoft.UI.Xaml.Controls.CheckBox"
+            }
+            "ng-slider" | "ng-scale" | "gtk-scale" => "Microsoft.UI.Xaml.Controls.Slider",
+            "ng-select" | "ng-dropdown" | "gtk-drop-down" => "Microsoft.UI.Xaml.Controls.ComboBox",
             _ => "Microsoft.UI.Xaml.UIElement",
         }
     }

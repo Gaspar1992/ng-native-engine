@@ -5,6 +5,12 @@ This project adheres to [Conventional Commits](https://www.conventionalcommits.o
 
 ## [Unreleased]
 
+### Features (Phase 4 — Interactive Controls & `@ng-native/forms`)
+
+- **widgets:** add `<ng-entry>` (`GtkEntry`), `<ng-switch>` (`GtkSwitch`), `<ng-checkbox>` (`GtkCheckButton`), `<ng-slider>` (`GtkScale`), and `<ng-select>` (`GtkDropDown`) across `WidgetKind`, `RenderEngine` preview, `Gtk4Sys`, `GtkLinuxBackend`, `WinUiBackend`, and `MacOsAppKitBackend`.
+- **forms:** create `@ng-native/forms` (`packages/forms-native`) providing `NativeTextValueAccessor`, `NativeBooleanValueAccessor`, and `NativeNumberValueAccessor` (`ControlValueAccessor` directives) for two-way reactive and template-driven Angular forms over `NativeRenderer2`.
+- **events:** support typed `EventPayload` (`None`, `Text`, `Bool`, `Int`) across `EventRegistry`, `JsRuntime`, and `JsEngineBackend` (`__dispatchEvent`).
+
 ### Features (Phase 3 — Pluggable JS Engines & `@ng-native/platform`)
 
 - **runtime:** add hexagonal `JsEngineBackend` trait (`src/runtime/js_engine.rs`) with dual adapters: Apple/WebKit **JavaScriptCore (`JscEngine`)** via isolated dynamic FFI (`src/runtime/jsc_sys.rs`, `libjavascriptcoregtk-6.0.so.1` 4-tier JIT) and portable **QuickJS (`QuickJsEngine`)**, selectable via `angular.json` (`"jsEngine": "jsc" | "quickjs"`).

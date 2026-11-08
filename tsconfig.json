@@ -16,7 +16,8 @@
     "module": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@ng-native/platform": ["./packages/platform-native/src/index.ts"]
+      "@ng-native/platform": ["./packages/platform-native/src/index.ts"],
+      "@ng-native/forms": ["./packages/forms-native/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

@@ -38,6 +38,26 @@ pub enum WidgetKind {
     Label {
         text: String,
     },
+    Entry {
+        text: String,
+        placeholder: String,
+    },
+    Switch {
+        active: bool,
+    },
+    CheckButton {
+        label: String,
+        active: bool,
+    },
+    Slider {
+        value: i64,
+        min: i64,
+        max: i64,
+    },
+    DropDown {
+        options: Vec<String>,
+        selected: usize,
+    },
     Anchor {
         comment: String,
     },
@@ -79,6 +99,24 @@ impl WidgetKind {
             "ng-label" | "gtk-label" => Ok(Self::Label {
                 text: String::new(),
             }),
+            "ng-entry" | "gtk-entry" => Ok(Self::Entry {
+                text: String::new(),
+                placeholder: String::new(),
+            }),
+            "ng-switch" | "gtk-switch" => Ok(Self::Switch { active: false }),
+            "ng-checkbox" | "ng-check" | "gtk-check-button" => Ok(Self::CheckButton {
+                label: String::new(),
+                active: false,
+            }),
+            "ng-slider" | "ng-scale" | "gtk-scale" => Ok(Self::Slider {
+                value: 0,
+                min: 0,
+                max: 100,
+            }),
+            "ng-select" | "ng-dropdown" | "gtk-drop-down" => Ok(Self::DropDown {
+                options: Vec::new(),
+                selected: 0,
+            }),
             "ng-anchor" | "#comment" => Ok(Self::Anchor {
                 comment: String::new(),
             }),
@@ -99,10 +137,21 @@ impl WidgetKind {
     pub fn set_text(&mut self, id: NodeId, text: impl Into<String>) -> Result<(), EngineError> {
         match self {
             Self::Window { title, .. } | Self::HeaderBar { title, .. } => *title = text.into(),
-            Self::Button { label } => *label = text.into(),
-            Self::Label { text: label_text } => *label_text = text.into(),
+            Self::Button { label } | Self::CheckButton { label, .. } => *label = text.into(),
+            Self::Label { text: label_text }
+            | Self::Entry {
+                text: label_text, ..
+            } => {
+                *label_text = text.into();
+            }
             Self::Anchor { comment } => *comment = text.into(),
-            Self::Box { .. } | Self::Scroll { .. } | Self::Grid { .. } | Self::Separator { .. } => {
+            Self::Box { .. }
+            | Self::Scroll { .. }
+            | Self::Grid { .. }
+            | Self::Separator { .. }
+            | Self::Switch { .. }
+            | Self::Slider { .. }
+            | Self::DropDown { .. } => {
                 return Err(EngineError::InvalidParent(id));
             }
         }
@@ -167,6 +216,66 @@ impl WidgetKind {
             Self::Separator { vertical } if key == "orientation" => {
                 *vertical = value == "vertical";
             }
+            _ => self.set_interactive_attribute(key, value),
+        }
+    }
+
+    fn set_interactive_attribute(&mut self, key: &str, value: &str) {
+        match self {
+            Self::Entry {
+                text, placeholder, ..
+            } => match key {
+                "value" | "text" => value.clone_into(text),
+                "placeholder" => value.clone_into(placeholder),
+                _ => {}
+            },
+            Self::Switch { active } => {
+                if key == "active" || key == "checked" || key == "value" {
+                    *active = value == "true" || value == "1";
+                }
+            }
+            Self::CheckButton { label, active } => match key {
+                "label" => value.clone_into(label),
+                "active" | "checked" | "value" => *active = value == "true" || value == "1",
+                _ => {}
+            },
+            Self::Slider {
+                value: val,
+                min,
+                max,
+            } => match key {
+                "value" => {
+                    if let Ok(v) = value.trim().parse::<i64>() {
+                        *val = v.clamp(*min, *max);
+                    }
+                }
+                "min" => {
+                    if let Ok(m) = value.trim().parse::<i64>() {
+                        *min = m;
+                    }
+                }
+                "max" => {
+                    if let Ok(m) = value.trim().parse::<i64>() {
+                        *max = m;
+                    }
+                }
+                _ => {}
+            },
+            Self::DropDown { options, selected } => match key {
+                "options" => {
+                    *options = value
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                }
+                "selected" | "value" => {
+                    if let Ok(idx) = value.trim().parse::<usize>() {
+                        *selected = idx;
+                    }
+                }
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -218,6 +327,11 @@ impl WidgetKind {
             Self::Button { .. }
             | Self::Label { .. }
             | Self::Separator { .. }
+            | Self::Entry { .. }
+            | Self::Switch { .. }
+            | Self::CheckButton { .. }
+            | Self::Slider { .. }
+            | Self::DropDown { .. }
             | Self::Anchor { .. } => Err(EngineError::InvalidParent(parent_id)),
         }
     }
@@ -251,6 +365,11 @@ impl WidgetKind {
             Self::Button { .. }
             | Self::Label { .. }
             | Self::Separator { .. }
+            | Self::Entry { .. }
+            | Self::Switch { .. }
+            | Self::CheckButton { .. }
+            | Self::Slider { .. }
+            | Self::DropDown { .. }
             | Self::Anchor { .. } => Err(EngineError::InvalidParent(parent_id)),
         }
     }
@@ -292,6 +411,11 @@ impl WidgetKind {
             Self::Button { .. }
             | Self::Label { .. }
             | Self::Separator { .. }
+            | Self::Entry { .. }
+            | Self::Switch { .. }
+            | Self::CheckButton { .. }
+            | Self::Slider { .. }
+            | Self::DropDown { .. }
             | Self::Anchor { .. } => Err(EngineError::InvalidParent(parent_id)),
         }
     }
@@ -312,6 +436,11 @@ mod tests {
             "ng-separator",
             "ng-button",
             "ng-label",
+            "ng-entry",
+            "ng-switch",
+            "ng-checkbox",
+            "ng-slider",
+            "ng-select",
             "ng-anchor",
         ] {
             assert!(WidgetKind::from_tag(tag).is_ok(), "Failed to parse {tag}");
@@ -323,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    fn updates_layout_attributes_on_containers() {
+    fn updates_layout_and_interactive_form_attributes() {
         let mut bx = WidgetKind::from_tag("ng-box").unwrap();
         bx.set_attribute("orientation", "horizontal");
         bx.set_attribute("spacing", "24px");
@@ -336,17 +465,18 @@ mod tests {
             }
         ));
 
-        let mut grid = WidgetKind::from_tag("ng-grid").unwrap();
-        grid.set_attribute("row-spacing", "10px");
-        grid.set_attribute("column-spacing", "20px");
+        let mut entry = WidgetKind::from_tag("ng-entry").unwrap();
+        entry.set_attribute("placeholder", "Email");
+        entry.set_attribute("value", "dev@angular.io");
         assert!(matches!(
-            grid,
-            WidgetKind::Grid {
-                row_spacing: 10,
-                column_spacing: 20,
-                ..
-            }
+            entry,
+            WidgetKind::Entry { ref text, ref placeholder }
+            if text == "dev@angular.io" && placeholder == "Email"
         ));
+
+        let mut sw = WidgetKind::from_tag("ng-switch").unwrap();
+        sw.set_attribute("active", "true");
+        assert!(matches!(sw, WidgetKind::Switch { active: true }));
     }
 
     #[test]

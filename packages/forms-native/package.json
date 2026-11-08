@@ -1,0 +1,13 @@
+{
+  "name": "@ng-native/forms",
+  "version": "0.1.0",
+  "description": "Angular ControlValueAccessor directives for Native GTK4 / WinUI 3 / AppKit widgets (<ng-entry>, <ng-switch>, <ng-checkbox>, <ng-slider>, <ng-select>)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "peerDependencies": {
+    "@angular/core": "^21.0.0",
+    "@angular/forms": "^21.0.0",
+    "@ng-native/platform": "0.1.0"
+  }
+}

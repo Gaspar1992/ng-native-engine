@@ -26,6 +26,11 @@ pub trait PlatformBackend {
             "ng-separator" | "gtk-separator" => "NativeSeparator",
             "ng-label" | "gtk-label" => "NativeLabel",
             "ng-button" | "gtk-button" => "NativeButton",
+            "ng-entry" | "gtk-entry" => "NativeEntry",
+            "ng-switch" | "gtk-switch" => "NativeSwitch",
+            "ng-checkbox" | "ng-check" | "gtk-check-button" => "NativeCheckButton",
+            "ng-slider" | "ng-scale" | "gtk-scale" => "NativeSlider",
+            "ng-select" | "ng-dropdown" | "gtk-drop-down" => "NativeDropDown",
             _ => "NativeWidget",
         }
     }

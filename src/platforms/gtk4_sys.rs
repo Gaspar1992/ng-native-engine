@@ -58,6 +58,19 @@ pub struct Gtk4Sys {
     pub(super) gtk_label_set_text: unsafe extern "C" fn(*mut c_void, *const c_char),
     pub(super) gtk_button_new_with_label: unsafe extern "C" fn(*const c_char) -> *mut c_void,
     pub(super) gtk_button_set_label: unsafe extern "C" fn(*mut c_void, *const c_char),
+    pub(super) gtk_entry_new: unsafe extern "C" fn() -> *mut c_void,
+    pub(super) gtk_entry_set_placeholder_text: unsafe extern "C" fn(*mut c_void, *const c_char),
+    pub(super) gtk_editable_set_text: unsafe extern "C" fn(*mut c_void, *const c_char),
+    pub(super) gtk_switch_new: unsafe extern "C" fn() -> *mut c_void,
+    pub(super) gtk_switch_set_active: unsafe extern "C" fn(*mut c_void, c_int),
+    pub(super) gtk_check_button_new_with_label: unsafe extern "C" fn(*const c_char) -> *mut c_void,
+    pub(super) gtk_check_button_set_label: unsafe extern "C" fn(*mut c_void, *const c_char),
+    pub(super) gtk_check_button_set_active: unsafe extern "C" fn(*mut c_void, c_int),
+    pub(super) gtk_scale_new_with_range: unsafe extern "C" fn(c_int, f64, f64, f64) -> *mut c_void,
+    pub(super) gtk_range_set_value: unsafe extern "C" fn(*mut c_void, f64),
+    pub(super) gtk_drop_down_new_from_strings:
+        unsafe extern "C" fn(*const *const c_char) -> *mut c_void,
+    pub(super) gtk_drop_down_set_selected: unsafe extern "C" fn(*mut c_void, c_uint),
     pub(super) gtk_widget_add_css_class: unsafe extern "C" fn(*mut c_void, *const c_char),
     pub(super) gtk_widget_set_hexpand: unsafe extern "C" fn(*mut c_void, c_int),
     pub(super) gtk_widget_set_vexpand: unsafe extern "C" fn(*mut c_void, c_int),
@@ -85,6 +98,7 @@ pub struct Gtk4Sys {
 
 impl Gtk4Sys {
     #[cfg(target_os = "linux")]
+    #[allow(clippy::too_many_lines)]
     pub fn try_load() -> Option<Self> {
         unsafe {
             let gtk_lib = Self::open_lib(c"libgtk-4.so.1")?;
@@ -165,6 +179,30 @@ impl Gtk4Sys {
                 gtk_label_set_text: Self::load_fn(gtk_lib, c"gtk_label_set_text")?,
                 gtk_button_new_with_label: Self::load_fn(gtk_lib, c"gtk_button_new_with_label")?,
                 gtk_button_set_label: Self::load_fn(gtk_lib, c"gtk_button_set_label")?,
+                gtk_entry_new: Self::load_fn(gtk_lib, c"gtk_entry_new")?,
+                gtk_entry_set_placeholder_text: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_entry_set_placeholder_text",
+                )?,
+                gtk_editable_set_text: Self::load_fn(gtk_lib, c"gtk_editable_set_text")?,
+                gtk_switch_new: Self::load_fn(gtk_lib, c"gtk_switch_new")?,
+                gtk_switch_set_active: Self::load_fn(gtk_lib, c"gtk_switch_set_active")?,
+                gtk_check_button_new_with_label: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_check_button_new_with_label",
+                )?,
+                gtk_check_button_set_label: Self::load_fn(gtk_lib, c"gtk_check_button_set_label")?,
+                gtk_check_button_set_active: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_check_button_set_active",
+                )?,
+                gtk_scale_new_with_range: Self::load_fn(gtk_lib, c"gtk_scale_new_with_range")?,
+                gtk_range_set_value: Self::load_fn(gtk_lib, c"gtk_range_set_value")?,
+                gtk_drop_down_new_from_strings: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_drop_down_new_from_strings",
+                )?,
+                gtk_drop_down_set_selected: Self::load_fn(gtk_lib, c"gtk_drop_down_set_selected")?,
                 gtk_widget_add_css_class: Self::load_fn(gtk_lib, c"gtk_widget_add_css_class")?,
                 gtk_widget_set_hexpand: Self::load_fn(gtk_lib, c"gtk_widget_set_hexpand")?,
                 gtk_widget_set_vexpand: Self::load_fn(gtk_lib, c"gtk_widget_set_vexpand")?,

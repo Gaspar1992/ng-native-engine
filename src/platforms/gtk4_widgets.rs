@@ -75,6 +75,34 @@ impl Gtk4Sys {
         unsafe { GtkHandle((self.gtk_button_new_with_label)(c"".as_ptr())) }
     }
 
+    pub fn create_entry(&self) -> GtkHandle {
+        unsafe { GtkHandle((self.gtk_entry_new)()) }
+    }
+
+    pub fn create_switch(&self) -> GtkHandle {
+        unsafe { GtkHandle((self.gtk_switch_new)()) }
+    }
+
+    pub fn create_check_button(&self) -> GtkHandle {
+        unsafe { GtkHandle((self.gtk_check_button_new_with_label)(c"".as_ptr())) }
+    }
+
+    pub fn create_slider(&self) -> GtkHandle {
+        unsafe {
+            GtkHandle((self.gtk_scale_new_with_range)(
+                GTK_ORIENTATION_HORIZONTAL,
+                0.0,
+                100.0,
+                1.0,
+            ))
+        }
+    }
+
+    pub fn create_drop_down(&self) -> GtkHandle {
+        let null_list: [*const std::ffi::c_char; 1] = [std::ptr::null()];
+        unsafe { GtkHandle((self.gtk_drop_down_new_from_strings)(null_list.as_ptr())) }
+    }
+
     pub fn set_window_title(&self, win: GtkHandle, title: &str) {
         if let Ok(c_str) = CString::new(title) {
             unsafe {
@@ -216,6 +244,54 @@ impl Gtk4Sys {
             unsafe {
                 (self.gtk_button_set_label)(btn.0, c_str.as_ptr());
             }
+        }
+    }
+
+    pub fn set_entry_text(&self, entry: GtkHandle, text: &str) {
+        if let Ok(c_str) = CString::new(text) {
+            unsafe {
+                (self.gtk_editable_set_text)(entry.0, c_str.as_ptr());
+            }
+        }
+    }
+
+    pub fn set_entry_placeholder(&self, entry: GtkHandle, placeholder: &str) {
+        if let Ok(c_str) = CString::new(placeholder) {
+            unsafe {
+                (self.gtk_entry_set_placeholder_text)(entry.0, c_str.as_ptr());
+            }
+        }
+    }
+
+    pub fn set_switch_active(&self, sw: GtkHandle, active: bool) {
+        unsafe {
+            (self.gtk_switch_set_active)(sw.0, i32::from(active));
+        }
+    }
+
+    pub fn set_check_button_label(&self, chk: GtkHandle, text: &str) {
+        if let Ok(c_str) = CString::new(text) {
+            unsafe {
+                (self.gtk_check_button_set_label)(chk.0, c_str.as_ptr());
+            }
+        }
+    }
+
+    pub fn set_check_button_active(&self, chk: GtkHandle, active: bool) {
+        unsafe {
+            (self.gtk_check_button_set_active)(chk.0, i32::from(active));
+        }
+    }
+
+    pub fn set_slider_value(&self, scale: GtkHandle, val: f64) {
+        unsafe {
+            (self.gtk_range_set_value)(scale.0, val);
+        }
+    }
+
+    pub fn set_drop_down_selected(&self, dd: GtkHandle, idx: u32) {
+        unsafe {
+            (self.gtk_drop_down_set_selected)(dd.0, idx);
         }
     }
 
