@@ -29,6 +29,8 @@ pub struct Gtk4Sys {
     pub(super) gtk_window_new: unsafe extern "C" fn() -> *mut c_void,
     pub(super) gtk_window_set_title: unsafe extern "C" fn(*mut c_void, *const c_char),
     pub(super) gtk_window_set_titlebar: unsafe extern "C" fn(*mut c_void, *mut c_void),
+    pub(super) gtk_window_handle_new: unsafe extern "C" fn() -> *mut c_void,
+    pub(super) gtk_window_handle_set_child: unsafe extern "C" fn(*mut c_void, *mut c_void),
     pub(super) gtk_window_set_icon_name: unsafe extern "C" fn(*mut c_void, *const c_char),
     pub(super) gtk_window_set_default_icon_name: unsafe extern "C" fn(*const c_char),
     pub(super) gtk_window_set_default_size: unsafe extern "C" fn(*mut c_void, c_int, c_int),
@@ -38,7 +40,10 @@ pub struct Gtk4Sys {
     pub(super) gtk_window_get_toplevels: unsafe extern "C" fn() -> *mut c_void,
     pub(super) gtk_header_bar_new: unsafe extern "C" fn() -> *mut c_void,
     pub(super) gtk_header_bar_set_show_title_buttons: unsafe extern "C" fn(*mut c_void, c_int),
+    pub(super) gtk_header_bar_set_title_widget: unsafe extern "C" fn(*mut c_void, *mut c_void),
     pub(super) gtk_header_bar_pack_end: unsafe extern "C" fn(*mut c_void, *mut c_void),
+    pub(super) adw_window_title_new:
+        Option<unsafe extern "C" fn(*const c_char, *const c_char) -> *mut c_void>,
     pub(super) gtk_scrolled_window_new: unsafe extern "C" fn() -> *mut c_void,
     pub(super) gtk_scrolled_window_set_child: unsafe extern "C" fn(*mut c_void, *mut c_void),
     pub(super) gtk_scrolled_window_set_min_content_height: unsafe extern "C" fn(*mut c_void, c_int),
@@ -127,6 +132,15 @@ impl Gtk4Sys {
 
             let (css_provider, icon_theme) = Self::init_display_resources(gtk_lib)?;
 
+            let adw_lib = Self::open_lib(c"libadwaita-1.so.0");
+            if let Some(lib) = adw_lib
+                && let Some(adw_init) = Self::load_fn::<unsafe extern "C" fn()>(lib, c"adw_init")
+            {
+                adw_init();
+            }
+            let adw_window_title_new =
+                adw_lib.and_then(|lib| Self::load_fn(lib, c"adw_window_title_new"));
+
             Some(Self {
                 gtk_css_provider_load_from_string: Self::load_fn(
                     gtk_lib,
@@ -139,6 +153,11 @@ impl Gtk4Sys {
                 gtk_window_new: Self::load_fn(gtk_lib, c"gtk_window_new")?,
                 gtk_window_set_title: Self::load_fn(gtk_lib, c"gtk_window_set_title")?,
                 gtk_window_set_titlebar: Self::load_fn(gtk_lib, c"gtk_window_set_titlebar")?,
+                gtk_window_handle_new: Self::load_fn(gtk_lib, c"gtk_window_handle_new")?,
+                gtk_window_handle_set_child: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_window_handle_set_child",
+                )?,
                 gtk_window_set_icon_name: Self::load_fn(gtk_lib, c"gtk_window_set_icon_name")?,
                 gtk_window_set_default_icon_name: Self::load_fn(
                     gtk_lib,
@@ -157,7 +176,12 @@ impl Gtk4Sys {
                     gtk_lib,
                     c"gtk_header_bar_set_show_title_buttons",
                 )?,
+                gtk_header_bar_set_title_widget: Self::load_fn(
+                    gtk_lib,
+                    c"gtk_header_bar_set_title_widget",
+                )?,
                 gtk_header_bar_pack_end: Self::load_fn(gtk_lib, c"gtk_header_bar_pack_end")?,
+                adw_window_title_new,
                 gtk_scrolled_window_new: Self::load_fn(gtk_lib, c"gtk_scrolled_window_new")?,
                 gtk_scrolled_window_set_child: Self::load_fn(
                     gtk_lib,

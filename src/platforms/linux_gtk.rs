@@ -40,6 +40,7 @@ pub struct GtkLinuxBackend {
     pub(super) gtk: Option<Gtk4Sys>,
     pub(super) widgets: HashMap<NodeId, NativeGtkWidget>,
     pub(super) styles: HashMap<StyleId, StyleRule>,
+    pub(super) header_titles: HashMap<NodeId, (String, String)>,
 }
 
 impl Default for GtkLinuxBackend {
@@ -55,6 +56,7 @@ impl GtkLinuxBackend {
             gtk: Gtk4Sys::try_load(),
             widgets: HashMap::new(),
             styles: HashMap::new(),
+            header_titles: HashMap::new(),
         }
     }
 
@@ -128,6 +130,12 @@ impl GtkLinuxBackend {
                 let Some(handle) = widget.handle else { return };
                 match widget.kind {
                     GtkWidgetType::Window => gtk.set_window_title(handle, text),
+                    GtkWidgetType::HeaderBar => {
+                        let entry = self.header_titles.entry(*id).or_default();
+                        entry.0.clone_from(text);
+                        let (t, s) = (entry.0.clone(), entry.1.clone());
+                        gtk.set_header_bar_title(handle, &t, &s);
+                    }
                     GtkWidgetType::Label => gtk.set_label_text(handle, text),
                     GtkWidgetType::Button => gtk.set_button_label(handle, text),
                     GtkWidgetType::Entry => gtk.set_entry_text(handle, text),

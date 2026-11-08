@@ -42,7 +42,7 @@ impl GtkLinuxBackend {
         raw.trim().trim_end_matches("px").trim().parse::<i32>().ok()
     }
 
-    pub(super) fn apply_native_attribute(&self, node: NodeId, key: &str, value: &str) {
+    pub(super) fn apply_native_attribute(&mut self, node: NodeId, key: &str, value: &str) {
         let (Some(gtk), Some(widget)) = (&self.gtk, self.widgets.get(&node)) else {
             return;
         };
@@ -50,6 +50,18 @@ impl GtkLinuxBackend {
         match key {
             "title" if widget.kind == GtkWidgetType::Window => {
                 gtk.set_window_title(handle, value);
+            }
+            "title" if widget.kind == GtkWidgetType::HeaderBar => {
+                let entry = self.header_titles.entry(node).or_default();
+                entry.0 = value.to_string();
+                let (t, s) = (entry.0.clone(), entry.1.clone());
+                gtk.set_header_bar_title(handle, &t, &s);
+            }
+            "subtitle" if widget.kind == GtkWidgetType::HeaderBar => {
+                let entry = self.header_titles.entry(node).or_default();
+                entry.1 = value.to_string();
+                let (t, s) = (entry.0.clone(), entry.1.clone());
+                gtk.set_header_bar_title(handle, &t, &s);
             }
             "show-title-buttons" if widget.kind == GtkWidgetType::HeaderBar => {
                 gtk.set_header_bar_show_title_buttons(handle, value != "false" && value != "0");

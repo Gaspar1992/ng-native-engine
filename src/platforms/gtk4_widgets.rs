@@ -45,7 +45,11 @@ impl Gtk4Sys {
     }
 
     pub fn create_header_bar(&self) -> GtkHandle {
-        unsafe { GtkHandle((self.gtk_header_bar_new)()) }
+        unsafe {
+            let hb = (self.gtk_header_bar_new)();
+            (self.gtk_header_bar_set_show_title_buttons)(hb, 1);
+            GtkHandle(hb)
+        }
     }
 
     pub fn create_scrolled_window(&self) -> GtkHandle {
@@ -114,7 +118,38 @@ impl Gtk4Sys {
 
     pub fn set_window_titlebar(&self, win: GtkHandle, header_bar: GtkHandle) {
         unsafe {
-            (self.gtk_window_set_titlebar)(win.0, header_bar.0);
+            let handle = (self.gtk_window_handle_new)();
+            (self.gtk_window_handle_set_child)(handle, header_bar.0);
+            (self.gtk_window_set_titlebar)(win.0, handle);
+        }
+    }
+
+    pub fn set_header_bar_title(&self, hb: GtkHandle, title: &str, subtitle: &str) {
+        let c_title = CString::new(title).ok();
+        let c_sub = CString::new(subtitle).ok();
+        let title_ptr = c_title.as_ref().map_or(std::ptr::null(), |s| s.as_ptr());
+        let sub_ptr = c_sub.as_ref().map_or(std::ptr::null(), |s| s.as_ptr());
+
+        if let Some(adw_title_new) = self.adw_window_title_new {
+            unsafe {
+                let win_title = adw_title_new(title_ptr, sub_ptr);
+                (self.gtk_header_bar_set_title_widget)(hb.0, win_title);
+            }
+        } else {
+            unsafe {
+                let title_box = (self.gtk_box_new)(GTK_ORIENTATION_VERTICAL, 0);
+                self.set_halign(GtkHandle(title_box), "center");
+                self.set_valign(GtkHandle(title_box), "center");
+                let title_lbl = (self.gtk_label_new)(title_ptr);
+                self.add_css_class(GtkHandle(title_lbl), "title");
+                (self.gtk_box_append)(title_box, title_lbl);
+                if !subtitle.trim().is_empty() {
+                    let sub_lbl = (self.gtk_label_new)(sub_ptr);
+                    self.add_css_class(GtkHandle(sub_lbl), "subtitle");
+                    (self.gtk_box_append)(title_box, sub_lbl);
+                }
+                (self.gtk_header_bar_set_title_widget)(hb.0, title_box);
+            }
         }
     }
 
