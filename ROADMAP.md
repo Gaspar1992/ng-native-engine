@@ -78,16 +78,16 @@ When `@angular/platform-browser` is removed, Angular's Ivy runtime still require
   - [x] `<ng-grid>` (`GtkGrid`)
   - [x] `<ng-separator>` (`GtkSeparator`)
 
-### Phase 3: Embedded JS Engine & Custom `@ng-native/platform` (Next Up 🚧)
+### Phase 3: Embedded JS Engine & Custom `@ng-native/platform` (Completed ✅)
 
-- [ ] **Embed QuickJS-NG (`rquickjs`) in Rust:** Execute standard ES2022 bundles produced by `@angular/build:application` directly inside the Rust process.
-- [ ] **Bridge `glib::MainContext` + JS Microtask Queue:** Wire `setTimeout`, `clearTimeout`, `queueMicrotask`, and `console.*` globals in Rust so `provideZonelessChangeDetection()` runs natively.
-- [ ] **Create `@ng-native/platform` TypeScript Package:**
-  - [ ] Implement `NativeRendererFactory2` and `NativeRenderer2` over `globalThis.__NG_NATIVE__`.
-  - [ ] Support Angular `@if`, `@for`, `@switch`, and `@defer` blocks using `insert_before` and anchor nodes.
-  - [ ] Support nested `@Component` composition, `input()`, `output()`, `model()`, and `<ng-content>` projection.
+- [x] **Decoupled JS Engine Architecture (`JsEngineBackend`):** Support both Apple/WebKit **JavaScriptCore (`JscEngine` via `libjavascriptcoregtk-6.0.so.1`)** with 4-tier JIT and portable **QuickJS (`QuickJsEngine`)**, selectable via `angular.json` (`"jsEngine": "jsc" | "quickjs"`).
+- [x] **Bridge `glib::MainContext` + JS Microtask & Event Queue:** Wire `setTimeout`, `clearTimeout`, `queueMicrotask`, `console.*`, and live event closures (`__dispatchEvent`) in Rust so `provideZonelessChangeDetection()` runs natively.
+- [x] **Create `@ng-native/platform` TypeScript Package (`packages/platform-native`):**
+  - [x] Implement `NativeRendererFactory2` and `NativeRenderer2` (all 19 `Renderer2` methods) over `globalThis.__NG_NATIVE__`.
+  - [x] Support Angular `@if`, `@for`, `@switch`, and `@defer` blocks using `insert_before` and comment/anchor nodes.
+  - [x] Provide `provideNativePlatform()` and `bootstrapNativeApplication()`.
 
-### Phase 4: Interactive Controls & `@angular/forms` Compatibility
+### Phase 4: Interactive Controls & `@angular/forms` Compatibility (Next Up 🚧)
 
 - [ ] **Native Input Widgets in `GtkLinuxBackend`:**
   - [ ] `<ng-entry>` (`GtkEntry` with `changed` / `notify::text` signals)

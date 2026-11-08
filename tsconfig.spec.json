@@ -6,5 +6,5 @@
     "outDir": "./out-tsc/spec",
     "types": ["vitest/globals"]
   },
-  "include": ["examples/counter-app/src/**/*.ts"]
+  "include": ["examples/counter-app/src/**/*.ts", "packages/platform-native/src/**/*.ts"]
 }

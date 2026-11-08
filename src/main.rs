@@ -1,7 +1,7 @@
 use ng_native_engine::config::AngularNativeConfig;
 use ng_native_engine::engine::RenderEngine;
 use ng_native_engine::platforms::AnyPlatformBackend;
-use ng_native_engine::runtime::JsRuntime;
+use ng_native_engine::runtime::{JsEngineBackend, JsRuntime};
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -39,10 +39,15 @@ fn main() {
         cfg.project_name, cfg.target_platform, bundle_path
     );
 
-    // 2. Resolve the OS Backend via Factory Method (`linux-gtk4`, `windows-winui`, `macos-appkit`)
+    // 2. Resolve the OS Backend & Pluggable JS Engine (`jsc` or `quickjs`) via Factory Method
     let backend = AnyPlatformBackend::from_target(&cfg.target_platform).unwrap();
     let mut engine = RenderEngine::new(backend);
-    let mut js_runtime = JsRuntime::new();
+    let mut js_runtime = JsRuntime::from_engine_config(&cfg.js_engine).unwrap();
+    println!(
+        "Initialized JS Engine -> '{}' (JIT={})\n",
+        js_runtime.js_engine().engine_name(),
+        js_runtime.js_engine().is_jit_enabled()
+    );
 
     // 3. Tick #1: JS Runtime evaluates the compiled Angular bundle (styles + template + bindings)
     js_runtime

@@ -54,6 +54,7 @@
           "builder": "@ng-native/builders:engine",
           "options": {
             "targetPlatform": "linux-gtk4",
+            "jsEngine": "jsc",
             "outputPath": "dist/ng-linux-counter",
             "main": "examples/counter-app/src/main.ts"
           }

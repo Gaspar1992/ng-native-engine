@@ -5,6 +5,11 @@ This project adheres to [Conventional Commits](https://www.conventionalcommits.o
 
 ## [Unreleased]
 
+### Features (Phase 3 — Pluggable JS Engines & `@ng-native/platform`)
+
+- **runtime:** add hexagonal `JsEngineBackend` trait (`src/runtime/js_engine.rs`) with dual adapters: Apple/WebKit **JavaScriptCore (`JscEngine`)** via isolated dynamic FFI (`src/runtime/jsc_sys.rs`, `libjavascriptcoregtk-6.0.so.1` 4-tier JIT) and portable **QuickJS (`QuickJsEngine`)**, selectable via `angular.json` (`"jsEngine": "jsc" | "quickjs"`).
+- **platform:** create `@ng-native/platform` (`packages/platform-native`) implementing `NativeRenderer2`, `NativeRendererFactory2`, `NativeElementNode`, `provideNativePlatform()`, and `bootstrapNativeApplication()`.
+
 ### Features (Phase 2 — Scene Graph Completeness & Layout Primitives)
 
 - **engine:** add `Anchor` / `Comment` nodes, `insert_before`, `remove_child`, and `set_attribute` / `get_attribute` to `RenderEngine`, `WidgetKind`, and `RenderCommand`.

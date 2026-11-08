@@ -6,6 +6,7 @@ use std::path::Path;
 pub struct AngularNativeConfig {
     pub project_name: String,
     pub target_platform: String,
+    pub js_engine: String,
     pub output_path: String,
 }
 
@@ -22,12 +23,15 @@ impl AngularNativeConfig {
             })?;
         let target_platform = Self::extract_json_string(&content, "targetPlatform")
             .ok_or_else(|| EngineError::ConfigError(String::from("Missing 'targetPlatform'")))?;
+        let js_engine =
+            Self::extract_json_string(&content, "jsEngine").unwrap_or_else(|| String::from("jsc"));
         let output_path = Self::extract_json_string(&content, "outputPath")
             .ok_or_else(|| EngineError::ConfigError(String::from("Missing 'outputPath'")))?;
 
         Ok(Self {
             project_name,
             target_platform,
+            js_engine,
             output_path,
         })
     }
@@ -70,6 +74,7 @@ mod tests {
         let cfg = AngularNativeConfig::from_file("angular.json").unwrap();
         assert_eq!(cfg.project_name, "ng-linux-counter");
         assert_eq!(cfg.target_platform, "linux-gtk4");
+        assert_eq!(cfg.js_engine, "jsc");
         assert_eq!(cfg.output_path, "dist/ng-linux-counter");
     }
 }

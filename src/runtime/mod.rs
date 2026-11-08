@@ -1,7 +1,10 @@
+pub mod js_engine;
+pub mod jsc_sys;
 pub mod parser;
 
 use crate::engine::{EngineError, NodeId, RenderEngine};
 use crate::platforms::PlatformBackend;
+pub use js_engine::{AnyJsEngine, JsEngineBackend, JscEngine, QuickJsEngine};
 pub use parser::{Instruction, parse_instruction, parse_script};
 use std::collections::{HashMap, HashSet};
 
@@ -20,10 +23,12 @@ enum HandlerAction {
 }
 
 /// Embedded JS Bridge Runtime that executes compiled Angular instructions (`.ngb`),
+/// hosts a pluggable `JsEngineBackend` (`JavaScriptCore` JIT or `QuickJS`),
 /// maintains reactive Signal state, supports state-preserving Hot Reload (HMR),
 /// and dispatches native OS events back into Angular handlers.
 #[derive(Default)]
 pub struct JsRuntime {
+    js_engine: AnyJsEngine,
     variables: HashMap<String, NodeId>,
     signals: HashMap<String, i64>,
     bindings: Vec<TextBinding>,
@@ -33,13 +38,42 @@ pub struct JsRuntime {
 
 impl JsRuntime {
     pub fn new() -> Self {
+        Self::with_engine(AnyJsEngine::default())
+    }
+
+    pub fn with_engine(js_engine: AnyJsEngine) -> Self {
         Self {
+            js_engine,
             variables: HashMap::new(),
             signals: HashMap::new(),
             bindings: Vec::new(),
             handlers: HashMap::new(),
             next_listener_id: 1,
         }
+    }
+
+    pub fn from_engine_config(engine_kind: &str) -> Result<Self, EngineError> {
+        let js_engine = AnyJsEngine::from_config(engine_kind)?;
+        Ok(Self::with_engine(js_engine))
+    }
+
+    pub fn js_engine(&self) -> &AnyJsEngine {
+        &self.js_engine
+    }
+
+    /// Evaluates JavaScript code inside the active `JsEngineBackend` (`JscEngine` or `QuickJsEngine`)
+    /// and flushes any `globalThis.__NG_NATIVE__` scene mutations to `RenderEngine`.
+    pub fn eval_js<B: PlatformBackend>(
+        &mut self,
+        engine: &mut RenderEngine<B>,
+        js_code: &str,
+    ) -> Result<String, EngineError> {
+        let eval_result = self.js_engine.eval_script(js_code)?;
+        let drained = self.js_engine.drain_native_commands()?;
+        if !drained.trim().is_empty() {
+            self.eval_tick(engine, &drained)?;
+        }
+        Ok(eval_result)
     }
 
     pub fn eval_tick<B: PlatformBackend>(
@@ -92,6 +126,11 @@ impl JsRuntime {
         event_name: &str,
     ) -> Result<(), EngineError> {
         let node_id = self.resolve_var(var_name)?;
+        self.js_engine.dispatch_js_event(var_name, event_name)?;
+        let drained = self.js_engine.drain_native_commands()?;
+        if !drained.trim().is_empty() {
+            self.eval_tick(engine, &drained)?;
+        }
         self.trigger_node_event(engine, node_id, event_name)
     }
 
