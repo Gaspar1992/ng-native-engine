@@ -131,6 +131,12 @@ impl Gtk4Sys {
         }
     }
 
+    pub fn set_widget_visible(&self, widget: GtkHandle, visible: bool) {
+        unsafe {
+            (self.gtk_widget_set_visible)(widget.0, i32::from(visible));
+        }
+    }
+
     pub fn create_level_bar(&self) -> GtkHandle {
         unsafe {
             let bar = (self.gtk_level_bar_new)();

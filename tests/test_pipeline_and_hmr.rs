@@ -21,7 +21,7 @@ fn full_mvp_pipeline_with_headless_backend() {
     // Tick 1: Mount Angular component (signals + styles + template + icon + declarative events)
     runtime.eval_tick(&mut engine, &script).unwrap();
     assert_eq!(engine.backend().frames.len(), 1);
-    assert_eq!(engine.backend().frames[0].len(), 143);
+    assert_eq!(engine.backend().frames[0].len(), 356);
 
     let win = runtime.resolve_var("win").unwrap();
     let hello = runtime.resolve_var("hello").unwrap();
@@ -29,11 +29,9 @@ fn full_mvp_pipeline_with_headless_backend() {
     let lbl = runtime.resolve_var("lbl").unwrap();
 
     let preview = engine.render_window_preview(win).unwrap();
-    assert!(preview.contains("NgNative - Hola Mundo"));
+    assert!(preview.contains("Pokédex Nacional"));
     assert!(preview.contains("[ICO:16x16, 32x32, 48x48]"));
-    assert!(
-        preview.contains("[HeaderBar: NgNative - Hola Mundo — Angular 22 + GTK4 / Libadwaita]")
-    );
+    assert!(preview.contains("[HeaderBar: Pokédex Nacional — Angular 22 + GTK4 / Libadwaita]"));
     assert!(preview.contains("Hola Mundo desde Angular Native!"));
     assert!(preview.contains(".hero-title"));
     assert!(preview.contains(
@@ -41,10 +39,10 @@ fn full_mvp_pipeline_with_headless_backend() {
     ));
     assert!(preview.contains(".main-card(bg:#242424, fg:#ffffff, pad:16px, radius:14px)"));
     assert!(preview.contains("[Entry: \"ng-native-dev\"]"));
-    assert!(preview.contains("[Switch: ON]"));
-    assert!(preview.contains("[x] Enable native JIT"));
-    assert!(preview.contains("[Slider: 60 (30..144)]"));
-    assert!(preview.contains("[Select: \"Linux GTK4\" (0)]"));
+    assert!(preview.contains("Pokémon destacados"));
+    assert!(preview.contains("Bulbasaur"));
+    assert!(preview.contains("Pikachu"));
+    assert!(preview.contains("Charizard"));
 
     assert!(engine.backend().frames[0].iter().any(|cmd| matches!(
         cmd,
@@ -52,7 +50,7 @@ fn full_mvp_pipeline_with_headless_backend() {
             if *id == hello && text.starts_with("Hola Mundo desde Angular Native!")
     )));
 
-    // Tick 2: Declarative `(click)="increment()"` updates signal `count` -> `Count: 1`
+    // Tick 2: Declarative `(click)="increment()"` updates signal `count` -> `Pokémon #1`
     runtime
         .trigger_event(&mut engine, "btn", "clicked")
         .unwrap();
@@ -61,11 +59,11 @@ fn full_mvp_pipeline_with_headless_backend() {
         engine.backend().frames[1],
         vec![RenderCommand::SetText {
             id: lbl,
-            text: String::from("Count: 1"),
+            text: String::from("Pokémon #1"),
         }]
     );
 
-    // Tick 3: Second click increments signal `count` -> `Count: 2`
+    // Tick 3: Second click increments signal `count` -> `Pokémon #2`
     runtime
         .trigger_event(&mut engine, "btn", "clicked")
         .unwrap();
@@ -74,11 +72,11 @@ fn full_mvp_pipeline_with_headless_backend() {
         engine.backend().frames[2],
         vec![RenderCommand::SetText {
             id: lbl,
-            text: String::from("Count: 2"),
+            text: String::from("Pokémon #2"),
         }]
     );
 
-    // Tick 4: Decrement button `(click)="decrement()"` -> `Count: 1`
+    // Tick 4: Decrement button `(click)="decrement()"` -> `Pokémon #1`
     runtime
         .trigger_event(&mut engine, "btn_dec", "clicked")
         .unwrap();
@@ -86,11 +84,11 @@ fn full_mvp_pipeline_with_headless_backend() {
         engine.backend().frames[3],
         vec![RenderCommand::SetText {
             id: lbl,
-            text: String::from("Count: 1"),
+            text: String::from("Pokémon #1"),
         }]
     );
 
-    // Tick 5: Reset button `(click)="reset()"` -> `Count: 0`
+    // Tick 5: Reset button `(click)="reset()"` -> `Pokémon #0`
     runtime
         .trigger_event(&mut engine, "btn_reset", "clicked")
         .unwrap();
@@ -98,7 +96,7 @@ fn full_mvp_pipeline_with_headless_backend() {
         engine.backend().frames[4],
         vec![RenderCommand::SetText {
             id: lbl,
-            text: String::from("Count: 0"),
+            text: String::from("Pokémon #0"),
         }]
     );
 
@@ -132,7 +130,7 @@ fn hot_reload_preserves_signal_state_and_updates_template_and_styles() {
 
     let win = runtime.resolve_var("win").unwrap();
     let before_preview = engine.render_window_preview(win).unwrap();
-    assert!(before_preview.contains("Count: 2"));
+    assert!(before_preview.contains("Pokémon #2"));
 
     // 2. Simulate saving updated `app.html` and `app.css` while window is open
     let updated_script = initial_script
@@ -140,8 +138,8 @@ fn hot_reload_preserves_signal_state_and_updates_template_and_styles() {
         .map(|line| {
             if line.starts_with("text hello ") {
                 "text hello Hola Mundo en Vivo (HMR)!"
-            } else if line.starts_with("bind_text lbl count ") {
-                "bind_text lbl count Contador HMR: {}"
+            } else if line.starts_with("bind_text lbl pokemonId ") {
+                "bind_text lbl pokemonId Pokédex HMR: {}"
             } else if line.starts_with("style hero-title ") {
                 "style hero-title none #22c55e 8 0"
             } else {
@@ -156,7 +154,7 @@ fn hot_reload_preserves_signal_state_and_updates_template_and_styles() {
     // 3. Verify signal `count` stayed at 2 while template text and CSS updated in-place
     let after_preview = engine.render_window_preview(win).unwrap();
     assert!(after_preview.contains("Hola Mundo en Vivo (HMR)!"));
-    assert!(after_preview.contains("Contador HMR: 2"));
+    assert!(after_preview.contains("Pokédex HMR: 2"));
     assert!(after_preview.contains(".hero-title(bg:transparent, fg:#22c55e, pad:8px)"));
 
     // 4. Verify event listener re-bound cleanly after HMR (`count` -> 3)
@@ -164,7 +162,7 @@ fn hot_reload_preserves_signal_state_and_updates_template_and_styles() {
         .trigger_event(&mut engine, "btn", "clicked")
         .unwrap();
     let next_preview = engine.render_window_preview(win).unwrap();
-    assert!(next_preview.contains("Contador HMR: 3"));
+    assert!(next_preview.contains("Pokédex HMR: 3"));
 }
 
 #[test]

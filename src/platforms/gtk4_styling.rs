@@ -108,6 +108,7 @@ impl GtkLinuxBackend {
             }
             "hexpand" => gtk.set_hexpand(handle, value == "true" || value == "1"),
             "vexpand" => gtk.set_vexpand(handle, value == "true" || value == "1"),
+            "visible" => gtk.set_widget_visible(handle, value != "false" && value != "0"),
             "halign" => gtk.set_halign(handle, value),
             "valign" => gtk.set_valign(handle, value),
             "margin" => {

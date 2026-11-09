@@ -10,21 +10,57 @@ import { TypeBadge } from './type-badge';
   styleUrl: './app.css',
 })
 export class App {
-  protected readonly windowTitle = signal('NgNative - Hola Mundo');
+  protected readonly windowTitle = signal('Pokédex Nacional');
   protected readonly subtitle = signal('Angular 22 + GTK4 / Libadwaita');
-  protected readonly greeting = signal('Hola Mundo desde Angular Native! 2');
+  protected readonly greeting = signal('Hola Mundo desde Angular Native!');
   protected readonly author = signal('ng-native-dev');
-  protected readonly count = signal(0);
+  protected readonly pokemonId = signal(0);
 
   increment(): void {
-    this.count.update((value) => value + 1);
+    this.pokemonId.update((value) => value + 1);
   }
 
   decrement(): void {
-    this.count.update((value) => value - 1);
+    this.pokemonId.update((value) => value - 1);
   }
 
   reset(): void {
-    this.count.set(0);
+    this.pokemonId.set(0);
+  }
+
+  nextPokemon(): void {
+    this.pokemonId.update((value) => value + 1);
+  }
+
+  previousPokemon(): void {
+    this.pokemonId.update((value) => value - 1);
+  }
+
+  backToList(): void {
+    this.pokemonId.set(0);
+  }
+
+  selectBulbasaur(): void {
+    this.pokemonId.set(1);
+  }
+
+  selectCharmander(): void {
+    this.pokemonId.set(4);
+  }
+
+  selectSquirtle(): void {
+    this.pokemonId.set(7);
+  }
+
+  selectPikachu(): void {
+    this.pokemonId.set(25);
+  }
+
+  selectCharizard(): void {
+    this.pokemonId.set(6);
+  }
+
+  selectGengar(): void {
+    this.pokemonId.set(94);
   }
 }

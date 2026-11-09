@@ -61,6 +61,8 @@ fn ensure_bundle_compiled(bundle_path: &str) -> String {
 }
 
 struct PokedexUiNodes {
+    list_view: Option<NodeId>,
+    detail_view: Option<NodeId>,
     hello: Option<NodeId>,
     lbl: Option<NodeId>,
     num: Option<NodeId>,
@@ -78,6 +80,8 @@ struct PokedexUiNodes {
 impl PokedexUiNodes {
     fn resolve(runtime: &JsRuntime) -> Self {
         Self {
+            list_view: runtime.resolve_var("list_view").ok(),
+            detail_view: runtime.resolve_var("detail_view").ok(),
             hello: runtime.resolve_var("hello").ok(),
             lbl: runtime.resolve_var("lbl").ok(),
             num: runtime.resolve_var("poke_num").ok(),
@@ -144,6 +148,53 @@ fn update_pokedex_ui(
     }
 }
 
+fn set_view_visibility(
+    engine: &mut RenderEngine<AnyPlatformBackend>,
+    nodes: &PokedexUiNodes,
+    show_detail: bool,
+) {
+    if let Some(lv) = nodes.list_view {
+        let _ = engine.set_attribute(lv, "visible", if show_detail { "false" } else { "true" });
+    }
+    if let Some(dv) = nodes.detail_view {
+        let _ = engine.set_attribute(dv, "visible", if show_detail { "true" } else { "false" });
+    }
+}
+
+fn sync_pokedex_navigation(
+    engine: &mut RenderEngine<AnyPlatformBackend>,
+    js_runtime: &mut JsRuntime,
+    nodes: &PokedexUiNodes,
+    last_view_id: &mut Option<i64>,
+) {
+    let current_id = js_runtime
+        .signal_value("pokemonId")
+        .or_else(|| js_runtime.signal_value("count"))
+        .unwrap_or(0);
+
+    if Some(current_id) != *last_view_id {
+        if current_id == 0 {
+            set_view_visibility(engine, nodes, false);
+            println!("\n[PokéAPI] Navigated -> Pantalla principal (Listado)");
+        } else {
+            set_view_visibility(engine, nodes, true);
+            if let Ok(poke) = js_runtime
+                .desktop_mut()
+                .fetch_pokemon(&current_id.to_string())
+            {
+                println!(
+                    "\n[PokéAPI] Navigated -> {} {} ({})",
+                    poke.format_id(),
+                    poke.display_name(),
+                    poke.primary_type
+                );
+                update_pokedex_ui(engine, nodes, &poke);
+            }
+        }
+        *last_view_id = Some(current_id);
+    }
+}
+
 struct InteractiveContext<'a> {
     cfg: &'a AngularNativeConfig,
     bundle_path: &'a str,
@@ -161,13 +212,11 @@ fn run_interactive_loop(
         "\n[GTK4 Native Window Active] Opened native Linux window '{}'. Watching '{}' for Hot Reload...",
         ctx.cfg.project_name, ctx.bundle_path
     );
-    let mut last_pokedex_id: Option<i64> = None;
+    let mut last_view_id: Option<i64> = Some(0);
     let mut nodes = PokedexUiNodes::resolve(&js_runtime);
 
-    if let Ok(poke) = js_runtime.desktop_mut().fetch_pokemon("1") {
-        update_pokedex_ui(&mut engine, &nodes, &poke);
-        last_pokedex_id = Some(1);
-    }
+    // Initial state: Start in main list view
+    set_view_visibility(&mut engine, &nodes, false);
 
     while engine.backend().open_window_count() > 0 {
         let native_events = engine.backend().step_native_events(false);
@@ -185,8 +234,9 @@ fn run_interactive_loop(
                         poke.display_name(),
                         poke.primary_type
                     );
+                    set_view_visibility(&mut engine, &nodes, true);
                     update_pokedex_ui(&mut engine, &nodes, &poke);
-                    last_pokedex_id = Some(i64::from(poke.id));
+                    last_view_id = Some(i64::from(poke.id));
                 }
             }
 
@@ -195,22 +245,7 @@ fn run_interactive_loop(
                 .unwrap();
         }
 
-        let current_count = js_runtime.signal_value("count").unwrap_or(0);
-        if Some(current_count) != last_pokedex_id && current_count > 0 {
-            if let Ok(poke) = js_runtime
-                .desktop_mut()
-                .fetch_pokemon(&current_count.to_string())
-            {
-                println!(
-                    "\n[PokéAPI] Navigated -> {} {} ({})",
-                    poke.format_id(),
-                    poke.display_name(),
-                    poke.primary_type
-                );
-                update_pokedex_ui(&mut engine, &nodes, &poke);
-            }
-            last_pokedex_id = Some(current_count);
-        }
+        sync_pokedex_navigation(&mut engine, &mut js_runtime, &nodes, &mut last_view_id);
 
         if let Some(ref mut server) = hmr_server {
             handle_hmr_messages(server, &mut engine, &mut js_runtime, ctx.win_id);
