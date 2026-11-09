@@ -43,6 +43,7 @@ impl MacOsAppKitBackend {
             "ng-select" | "ng-dropdown" | "gtk-drop-down" => "NSPopUpButton",
             "ng-image" | "gtk-picture" | "ng-picture" => "NSImageView",
             "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => "NSLevelIndicator",
+            "ng-flow" | "ng-flow-box" | "gtk-flow-box" => "NSCollectionView",
             _ => "NSView",
         }
     }

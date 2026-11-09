@@ -56,6 +56,45 @@ impl WidgetKind {
                 }
                 _ => {}
             },
+            Self::FlowBox {
+                row_spacing,
+                column_spacing,
+                min_children_per_line,
+                max_children_per_line,
+                homogeneous,
+                ..
+            } => match key {
+                "spacing" | "gap" => {
+                    if let Ok(parsed) = Self::parse_px(value) {
+                        *row_spacing = parsed;
+                        *column_spacing = parsed;
+                    }
+                }
+                "row-spacing" => {
+                    if let Ok(parsed) = Self::parse_px(value) {
+                        *row_spacing = parsed;
+                    }
+                }
+                "column-spacing" => {
+                    if let Ok(parsed) = Self::parse_px(value) {
+                        *column_spacing = parsed;
+                    }
+                }
+                "min-children" | "min-per-row" => {
+                    if let Ok(parsed) = value.trim().parse::<u32>() {
+                        *min_children_per_line = parsed;
+                    }
+                }
+                "max-children" | "max-per-row" => {
+                    if let Ok(parsed) = value.trim().parse::<u32>() {
+                        *max_children_per_line = parsed;
+                    }
+                }
+                "homogeneous" => {
+                    *homogeneous = value != "false" && value != "0";
+                }
+                _ => {}
+            },
             Self::Separator { vertical } if key == "orientation" => {
                 *vertical = value == "vertical";
             }

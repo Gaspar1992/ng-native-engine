@@ -68,6 +68,14 @@ pub enum WidgetKind {
         min: f64,
         max: f64,
     },
+    FlowBox {
+        row_spacing: u32,
+        column_spacing: u32,
+        min_children_per_line: u32,
+        max_children_per_line: u32,
+        homogeneous: bool,
+        children: Vec<NodeId>,
+    },
     Anchor {
         comment: String,
     },
@@ -137,6 +145,14 @@ impl WidgetKind {
                 min: 0.0,
                 max: 255.0,
             }),
+            "ng-flow" | "ng-flow-box" | "gtk-flow-box" => Ok(Self::FlowBox {
+                row_spacing: 0,
+                column_spacing: 0,
+                min_children_per_line: 0,
+                max_children_per_line: 0,
+                homogeneous: false,
+                children: Vec::new(),
+            }),
             "ng-anchor" | "#comment" => Ok(Self::Anchor {
                 comment: String::new(),
             }),
@@ -171,6 +187,7 @@ impl WidgetKind {
             Self::Box { .. }
             | Self::Scroll { .. }
             | Self::Grid { .. }
+            | Self::FlowBox { .. }
             | Self::Separator { .. }
             | Self::Switch { .. }
             | Self::Slider { .. }
@@ -215,6 +232,7 @@ impl WidgetKind {
             }
             Self::Box { children, .. }
             | Self::Grid { children, .. }
+            | Self::FlowBox { children, .. }
             | Self::HeaderBar { children, .. } => {
                 if !children.contains(&child_id) {
                     children.push(child_id);
@@ -244,6 +262,7 @@ impl WidgetKind {
         match self {
             Self::Box { children, .. }
             | Self::Grid { children, .. }
+            | Self::FlowBox { children, .. }
             | Self::HeaderBar { children, .. } => {
                 children.retain(|c| *c != new_child);
                 if let Some(ref_id) = ref_child {
@@ -300,6 +319,7 @@ impl WidgetKind {
             }
             Self::Box { children, .. }
             | Self::Grid { children, .. }
+            | Self::FlowBox { children, .. }
             | Self::HeaderBar { children, .. } => {
                 let before = children.len();
                 children.retain(|c| *c != child_id);
@@ -346,6 +366,9 @@ mod tests {
             "ng-select",
             "ng-image",
             "ng-level-bar",
+            "ng-flow",
+            "ng-flow-box",
+            "gtk-flow-box",
             "ng-anchor",
         ] {
             assert!(WidgetKind::from_tag(tag).is_ok(), "Failed to parse {tag}");

@@ -1,6 +1,10 @@
-import { LocationChangeEvent, LocationChangeListener, PlatformLocation } from '@angular/common';
-import { EnvironmentProviders, Injectable, makeEnvironmentProviders } from '@angular/core';
-import { provideRouter, RouterFeatures, Routes } from '@angular/router';
+import {
+  type LocationChangeEvent,
+  type LocationChangeListener,
+  PlatformLocation,
+} from '@angular/common';
+import { type EnvironmentProviders, Injectable, makeEnvironmentProviders } from '@angular/core';
+import { provideRouter, type RouterFeatures, type Routes } from '@angular/router';
 
 interface HistoryEntry {
   url: string;
@@ -126,7 +130,13 @@ export class NativePlatformLocation extends PlatformLocation {
   }
 
   private currentEntry(): HistoryEntry {
-    return this.historyStack[this.currentIndex] ?? { url: '/', title: '', state: null };
+    return (
+      this.historyStack[this.currentIndex] ?? {
+        url: '/',
+        title: '',
+        state: null,
+      }
+    );
   }
 
   private normalizeUrl(url: string): string {

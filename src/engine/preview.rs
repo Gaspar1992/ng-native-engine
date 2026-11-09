@@ -106,6 +106,15 @@ impl<B: PlatformBackend> RenderEngine<B> {
                     "[LevelBar #{idx}:{generation} value={value} range={min}..{max}{class_str}]"
                 )
             }
+            WidgetKind::FlowBox {
+                row_spacing,
+                column_spacing,
+                ..
+            } => {
+                format!(
+                    "[FlowBox #{idx}:{generation} row_spacing={row_spacing} col_spacing={column_spacing}{class_str}]"
+                )
+            }
             WidgetKind::Anchor { comment } => {
                 format!("[Anchor #{idx}:{generation} comment=\"{comment}\"]")
             }
@@ -120,7 +129,8 @@ impl<B: PlatformBackend> RenderEngine<B> {
             WidgetKind::Scroll { child, .. } => child.iter().copied().collect(),
             WidgetKind::HeaderBar { children, .. }
             | WidgetKind::Box { children, .. }
-            | WidgetKind::Grid { children, .. } => children.clone(),
+            | WidgetKind::Grid { children, .. }
+            | WidgetKind::FlowBox { children, .. } => children.clone(),
             WidgetKind::Separator { .. }
             | WidgetKind::Button { .. }
             | WidgetKind::Label { .. }
@@ -230,6 +240,13 @@ impl<B: PlatformBackend> RenderEngine<B> {
                 ..
             } => Some(format!(
                 "  [Grid row-gap:{row_spacing}px col-gap:{column_spacing}px]"
+            )),
+            WidgetKind::FlowBox {
+                row_spacing,
+                column_spacing,
+                ..
+            } => Some(format!(
+                "  [FlowBox row-gap:{row_spacing}px col-gap:{column_spacing}px]"
             )),
             WidgetKind::Separator { .. } => {
                 let sep = "─".repeat(width.saturating_sub(4));

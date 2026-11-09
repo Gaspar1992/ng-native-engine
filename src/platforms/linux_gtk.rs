@@ -27,6 +27,7 @@ pub(super) enum GtkWidgetType {
     DropDown,
     Image,
     LevelBar,
+    FlowBox,
     Anchor,
 }
 
@@ -260,6 +261,9 @@ impl GtkLinuxBackend {
             "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => {
                 (Some(gtk.create_level_bar()), GtkWidgetType::LevelBar)
             }
+            "ng-flow" | "ng-flow-box" | "gtk-flow-box" => {
+                (Some(gtk.create_flow_box()), GtkWidgetType::FlowBox)
+            }
             "ng-anchor" | "#comment" => (None, GtkWidgetType::Anchor),
             _ => return,
         };
@@ -294,6 +298,7 @@ impl GtkLinuxBackend {
                 GtkWidgetType::HeaderBar => gtk.header_bar_pack_end(p_h, c_h),
                 GtkWidgetType::Scroll => gtk.set_scrolled_child(p_h, c_h),
                 GtkWidgetType::Box => gtk.box_append(p_h, c_h),
+                GtkWidgetType::FlowBox => gtk.flow_box_append(p_h, c_h),
                 GtkWidgetType::Grid => {
                     gtk.grid_attach(p_h, c_h, child_index % 2, child_index / 2);
                 }
@@ -363,6 +368,11 @@ impl GtkLinuxBackend {
         {
             gtk.box_remove(p_h, c_h);
         }
+        if parent_w.kind == GtkWidgetType::FlowBox
+            && let (Some(p_h), Some(c_h)) = (parent_w.handle, child_w.handle)
+        {
+            gtk.flow_box_remove(p_h, c_h);
+        }
         if let Some(pw) = self.widgets.get_mut(&parent) {
             pw.children.retain(|c| *c != child);
         }
@@ -395,6 +405,7 @@ impl PlatformBackend for GtkLinuxBackend {
             "ng-select" | "ng-dropdown" | "gtk-drop-down" => "GtkDropDown",
             "ng-image" | "gtk-picture" | "ng-picture" => "GtkPicture",
             "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => "GtkLevelBar",
+            "ng-flow" | "ng-flow-box" | "gtk-flow-box" => "GtkFlowBox",
             "ng-anchor" | "#comment" => "GtkAnchorComment",
             _ => "GtkWidget",
         }

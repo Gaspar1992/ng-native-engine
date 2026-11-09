@@ -11,15 +11,21 @@ use std::fs;
 fn cross_platform_factory_supports_linux_windows_and_macos() {
     let linux = AnyPlatformBackend::from_target("linux-gtk4").unwrap();
     assert_eq!(linux.map_native_widget("ng-window"), "AdwApplicationWindow");
+    assert_eq!(linux.map_native_widget("ng-flow"), "GtkFlowBox");
 
     let windows = AnyPlatformBackend::from_target("windows-winui").unwrap();
     assert_eq!(
         windows.map_native_widget("ng-window"),
         "Microsoft.UI.Xaml.Window"
     );
+    assert_eq!(
+        windows.map_native_widget("ng-flow"),
+        "Microsoft.UI.Xaml.Controls.ItemsRepeater"
+    );
 
     let macos = AnyPlatformBackend::from_target("macos-appkit").unwrap();
     assert_eq!(macos.map_native_widget("ng-window"), "NSWindow");
+    assert_eq!(macos.map_native_widget("ng-flow"), "NSCollectionView");
 }
 
 #[test]

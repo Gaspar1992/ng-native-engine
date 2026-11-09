@@ -17,7 +17,13 @@
           >
         </ng-box>
 
-        <ng-grid id="pokemon_grid" row-spacing="12px" column-spacing="12px">
+        <ng-flow
+          id="pokemon_grid"
+          row-spacing="12px"
+          column-spacing="12px"
+          min-children="1"
+          max-children="6"
+        >
           <!-- Item 1: Bulbasaur -->
           <ng-box id="card_bulbasaur" class="grid-card" orientation="vertical" spacing="6px">
             <ng-image
@@ -128,7 +134,7 @@
               >Ver ficha ›</ng-button
             >
           </ng-box>
-        </ng-grid>
+        </ng-flow>
       </ng-box>
 
       <!-- POKÉDEX DETAIL VIEW: SELECTED POKÉMON COMPLETE STATS -->

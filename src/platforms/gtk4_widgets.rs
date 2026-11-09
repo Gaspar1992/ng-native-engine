@@ -157,6 +157,57 @@ impl Gtk4Sys {
         }
     }
 
+    pub fn create_flow_box(&self) -> GtkHandle {
+        unsafe {
+            let flow = (self.gtk_flow_box_new)();
+            (self.gtk_flow_box_set_selection_mode)(flow, 0); // GTK_SELECTION_NONE
+            (self.gtk_flow_box_set_homogeneous)(flow, 0);
+            GtkHandle(flow)
+        }
+    }
+
+    pub fn flow_box_append(&self, flow: GtkHandle, child: GtkHandle) {
+        unsafe {
+            (self.gtk_flow_box_append)(flow.0, child.0);
+        }
+    }
+
+    pub fn flow_box_remove(&self, flow: GtkHandle, child: GtkHandle) {
+        unsafe {
+            (self.gtk_flow_box_remove)(flow.0, child.0);
+        }
+    }
+
+    pub fn set_flow_box_row_spacing(&self, flow: GtkHandle, spacing: u32) {
+        unsafe {
+            (self.gtk_flow_box_set_row_spacing)(flow.0, spacing);
+        }
+    }
+
+    pub fn set_flow_box_column_spacing(&self, flow: GtkHandle, spacing: u32) {
+        unsafe {
+            (self.gtk_flow_box_set_column_spacing)(flow.0, spacing);
+        }
+    }
+
+    pub fn set_flow_box_min_children_per_line(&self, flow: GtkHandle, min: u32) {
+        unsafe {
+            (self.gtk_flow_box_set_min_children_per_line)(flow.0, min);
+        }
+    }
+
+    pub fn set_flow_box_max_children_per_line(&self, flow: GtkHandle, max: u32) {
+        unsafe {
+            (self.gtk_flow_box_set_max_children_per_line)(flow.0, max);
+        }
+    }
+
+    pub fn set_flow_box_homogeneous(&self, flow: GtkHandle, homogeneous: bool) {
+        unsafe {
+            (self.gtk_flow_box_set_homogeneous)(flow.0, i32::from(homogeneous));
+        }
+    }
+
     pub fn set_window_title(&self, win: GtkHandle, title: &str) {
         if let Ok(c_str) = CString::new(title) {
             unsafe {
@@ -532,7 +583,10 @@ impl Gtk4Sys {
 
     pub fn step_main_context(&self, may_block: bool) {
         unsafe {
-            (self.g_main_context_iteration)(std::ptr::null_mut(), i32::from(may_block));
+            if may_block {
+                (self.g_main_context_iteration)(std::ptr::null_mut(), 1);
+            }
+            while (self.g_main_context_iteration)(std::ptr::null_mut(), 0) != 0 {}
         }
     }
 }

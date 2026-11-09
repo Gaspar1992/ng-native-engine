@@ -45,11 +45,80 @@ impl GtkLinuxBackend {
         raw.trim().trim_end_matches("px").trim().parse::<i32>().ok()
     }
 
+    fn apply_container_attribute(
+        gtk: &Gtk4Sys,
+        kind: GtkWidgetType,
+        handle: GtkHandle,
+        key: &str,
+        value: &str,
+    ) -> bool {
+        match key {
+            "spacing" | "gap" if matches!(kind, GtkWidgetType::Grid | GtkWidgetType::FlowBox) => {
+                if let Some(px) = Self::parse_px_i32(value)
+                    && let Ok(u) = u32::try_from(px)
+                {
+                    if kind == GtkWidgetType::Grid {
+                        gtk.set_grid_row_spacing(handle, u);
+                        gtk.set_grid_column_spacing(handle, u);
+                    } else {
+                        gtk.set_flow_box_row_spacing(handle, u);
+                        gtk.set_flow_box_column_spacing(handle, u);
+                    }
+                }
+                true
+            }
+            "row-spacing" if matches!(kind, GtkWidgetType::Grid | GtkWidgetType::FlowBox) => {
+                if let Some(px) = Self::parse_px_i32(value)
+                    && let Ok(u) = u32::try_from(px)
+                {
+                    if kind == GtkWidgetType::Grid {
+                        gtk.set_grid_row_spacing(handle, u);
+                    } else {
+                        gtk.set_flow_box_row_spacing(handle, u);
+                    }
+                }
+                true
+            }
+            "column-spacing" if matches!(kind, GtkWidgetType::Grid | GtkWidgetType::FlowBox) => {
+                if let Some(px) = Self::parse_px_i32(value)
+                    && let Ok(u) = u32::try_from(px)
+                {
+                    if kind == GtkWidgetType::Grid {
+                        gtk.set_grid_column_spacing(handle, u);
+                    } else {
+                        gtk.set_flow_box_column_spacing(handle, u);
+                    }
+                }
+                true
+            }
+            "min-children" | "min-per-row" if kind == GtkWidgetType::FlowBox => {
+                if let Ok(u) = value.trim().parse::<u32>() {
+                    gtk.set_flow_box_min_children_per_line(handle, u);
+                }
+                true
+            }
+            "max-children" | "max-per-row" if kind == GtkWidgetType::FlowBox => {
+                if let Ok(u) = value.trim().parse::<u32>() {
+                    gtk.set_flow_box_max_children_per_line(handle, u);
+                }
+                true
+            }
+            "homogeneous" if kind == GtkWidgetType::FlowBox => {
+                gtk.set_flow_box_homogeneous(handle, value != "false" && value != "0");
+                true
+            }
+            _ => false,
+        }
+    }
+
     pub(super) fn apply_native_attribute(&mut self, node: NodeId, key: &str, value: &str) {
         let (Some(gtk), Some(widget)) = (&self.gtk, self.widgets.get(&node)) else {
             return;
         };
         let Some(handle) = widget.handle else { return };
+        if Self::apply_container_attribute(gtk, widget.kind, handle, key, value) {
+            return;
+        }
         match key {
             "title" if widget.kind == GtkWidgetType::Window => {
                 gtk.set_window_title(handle, value);
@@ -82,28 +151,6 @@ impl GtkLinuxBackend {
             "spacing" | "gap" if widget.kind == GtkWidgetType::Box => {
                 if let Some(px) = Self::parse_px_i32(value) {
                     gtk.set_box_spacing(handle, px);
-                }
-            }
-            "spacing" | "gap" if widget.kind == GtkWidgetType::Grid => {
-                if let Some(px) = Self::parse_px_i32(value)
-                    && let Ok(u) = u32::try_from(px)
-                {
-                    gtk.set_grid_row_spacing(handle, u);
-                    gtk.set_grid_column_spacing(handle, u);
-                }
-            }
-            "row-spacing" if widget.kind == GtkWidgetType::Grid => {
-                if let Some(px) = Self::parse_px_i32(value)
-                    && let Ok(u) = u32::try_from(px)
-                {
-                    gtk.set_grid_row_spacing(handle, u);
-                }
-            }
-            "column-spacing" if widget.kind == GtkWidgetType::Grid => {
-                if let Some(px) = Self::parse_px_i32(value)
-                    && let Ok(u) = u32::try_from(px)
-                {
-                    gtk.set_grid_column_spacing(handle, u);
                 }
             }
             "hexpand" => gtk.set_hexpand(handle, value == "true" || value == "1"),

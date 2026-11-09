@@ -49,6 +49,9 @@ impl WinUiBackend {
             "ng-level-bar" | "gtk-level-bar" | "ng-progress-bar" => {
                 "Microsoft.UI.Xaml.Controls.ProgressBar"
             }
+            "ng-flow" | "ng-flow-box" | "gtk-flow-box" => {
+                "Microsoft.UI.Xaml.Controls.ItemsRepeater"
+            }
             _ => "Microsoft.UI.Xaml.UIElement",
         }
     }
